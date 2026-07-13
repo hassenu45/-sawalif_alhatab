@@ -1,0 +1,27 @@
+{
+  "name": "سوالف على الحطب",
+  "short_name": "سوالف الحطب",
+  "description": "شاي وذرة وبوشار على الحطب الطبيعي",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0603",
+  "theme_color": "#0a0603",
+  "orientation": "portrait",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "12.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
