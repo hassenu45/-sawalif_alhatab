@@ -1,14 +1,14 @@
-const CACHE_NAME = 'sawalif-v2';
+const CACHE_NAME = 'sawalif-v4';
 const ASSETS = [
-    'index.html',
     'login.html',
+    'index.html',
     'login.css',
     'manifest.json',
+    'logo.png',
     'shay.png',
     'dhrah.png',
     'bushar.png',
     'kerk.png',
-    'ady.png',
     '12.jpg',
     'wired-outline-3042-bonfire-hover-pinch.gif',
     '5392928583_pin.mp4'
