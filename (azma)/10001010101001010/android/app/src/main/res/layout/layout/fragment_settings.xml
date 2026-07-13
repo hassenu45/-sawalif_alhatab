@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="الإعدادات"
+        android:textColor="#d4a056"
+android:textSize="24sp"
+            android:gravity="center"
+            android:padding="20dp"
+            android:fontFamily="serif" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="رقم الواتساب"
+        android:textColor="#d4a056"
+        android:textSize="16sp"
+        android:paddingTop="20dp"
+        android:paddingBottom="5dp" />
+
+    <EditText
+        android:id="@+id/settingsWhatsapp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="966XXXXXXXXX"
+        android:text="9665392928583"
+        android:textColor="#fff"
+        android:textColorHint="#666"
+        android:background="@drawable/settings_input"
+        android:padding="12dp"
+        android:inputType="phone" />
+
+    <Button
+        android:id="@+id/settingsSave"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="حفظ"
+        android:backgroundTint="#d4a056"
+        android:textColor="#000"
+        android:layout_marginTop="20dp"
+        android:padding="12dp" />
+
+    <Button
+        android:id="@+id/settingsClear"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="مسح كل الطلبات"
+        android:backgroundTint="#333"
+        android:textColor="#ff4444"
+        android:layout_marginTop="10dp"
+        android:padding="12dp" />
+
+</LinearLayout>
