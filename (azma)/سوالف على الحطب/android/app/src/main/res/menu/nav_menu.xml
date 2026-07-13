@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="القائمة">
+        <menu>
+            <item android:id="@+id/nav_home"
+                android:icon="@drawable/ic_home"
+                android:title="الرئيسية" />
+            <item android:id="@+id/nav_orders"
+                android:icon="@drawable/ic_order"
+                android:title="الطلبات" />
+            <item android:id="@+id/nav_delivery"
+                android:icon="@drawable/ic_delivery"
+                android:title="التوصيل" />
+            <item android:id="@+id/nav_location"
+                android:icon="@drawable/ic_location"
+                android:title="الموقع" />
+            <item android:id="@+id/nav_contact"
+                android:icon="@drawable/ic_contact"
+                android:title="اتصل بنا" />
+        </menu>
+    </item>
+</menu>
