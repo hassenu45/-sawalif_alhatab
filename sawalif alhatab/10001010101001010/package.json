@@ -1,0 +1,13 @@
+{
+  "name": "sawalif-alhatab",
+  "version": "2.0.0",
+  "description": "سوالف على الحطب - تطبيق طلبات شاي وذرة وبوشار على الحطب مع سيرفر حقيقي",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=14.17.0"
+  },
+  "private": true
+}

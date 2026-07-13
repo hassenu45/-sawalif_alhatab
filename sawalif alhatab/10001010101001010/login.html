@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سوالف على الحطب - دخول</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <div class="login-card" id="loginCard">
+        <h1>سوالف على الحطب</h1>
+        <p>حياك الله يابعدي، هلا وغلا</p>
+        <button onclick="startLoad()">ادخل المجلس</button>
+    </div>
+
+    <div class="loading-screen hidden" id="loadingScreen">
+        <img src="wired-outline-3042-bonfire-hover-pinch.gif" alt="loading" class="load-icon">
+    </div>
+
+    <script>
+        function startLoad() {
+            document.body.classList.add('loading');
+            document.getElementById('loginCard').classList.add('hidden');
+            document.getElementById('loadingScreen').classList.remove('hidden');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

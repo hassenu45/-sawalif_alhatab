@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="سوالف على الحطب - شاي وذرة وبوشار على الحطب الطبيعي">
+    <meta name="theme-color" content="#0a0603">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="login.css" as="style">
+    <link rel="stylesheet" href="login.css">
+    <title>سوالف على الحطب</title>
+</head>
+<body class="show-video">
+    <div class="bg-video-container">
+        <video class="bg-video" autoplay loop muted playsinline>
+            <source src="5392928583_pin.mp4" type="video/mp4">
+        </video>
+        <div class="bg-video-overlay"></div>
+    </div>
+
+    <!-- Hamburger Menu Button -->
+    <button class="hamburger" id="hamburger" onclick="openDrawer()" aria-label="القائمة" title="القائمة">
+        <span></span><span></span><span></span>
+    </button>
+
+    <!-- Drawer Overlay + Panel -->
+    <div class="drawer-overlay hidden" id="drawerOverlay" onclick="closeDrawer()"></div>
+    <aside class="drawer" id="drawer">
+        <div class="drawer-header">
+            <h2>القائمة</h2>
+            <button class="drawer-close" onclick="closeDrawer()" aria-label="إغلاق">✕</button>
+        </div>
+        <nav class="drawer-nav">
+            <a onclick="navTo('home');closeDrawer()">🏠 الرئيسية</a>
+            <a onclick="navTo('orders');closeDrawer()">📋 قائمة الطلبات</a>
+            <a onclick="navTo('delivery');closeDrawer()">🚗 التوصيل</a>
+            <a onclick="navTo('location');closeDrawer()">📍 موقعنا</a>
+            <a onclick="navTo('contact');closeDrawer()">📞 اتصل بنا</a>
+            <a onclick="navTo('settings');closeDrawer()">⚙️ الإعدادات</a>
+        </nav>
+    </aside>
+
+    <div class="main-content">
+        <h1 class="site-title">سوالف على الحطب</h1>
+
+        <!-- HOME VIEW -->
+        <div id="view-home" class="view-section">
+            <div class="container">
+                <div class="card" onclick="openMenu('dhrah')">
+                    <div class="card-img-wrapper">
+                        <img src="dhrah.png" alt="ذره" class="card-img">
+                    </div>
+                    <p>ذرة على الحطب</p>
+                    <span class="card-price" id="price-dhrah"></span>
+                </div>
+                <div class="card" onclick="openMenu('shay')">
+                    <div class="card-img-wrapper">
+                        <img src="shay.png" alt="شاي" class="card-img">
+                    </div>
+                    <p>شاي حطب</p>
+                    <span class="card-price" id="price-shay"></span>
+                </div>
+                <div class="card" onclick="openMenu('bushar')">
+                    <div class="card-img-wrapper">
+                        <img src="bushar.png" alt="بوشار" class="card-img">
+                    </div>
+                    <p>بوشار حطب</p>
+                    <span class="card-price" id="price-bushar"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MY ORDERS VIEW -->
+        <div id="view-orders" class="view-section hidden">
+            <div class="classic-panel">
+                <h2 class="section-title">طلباتي</h2>
+                <div id="ordersListContainer">
+                    <p class="empty-message">لا توجد طلبات مسجلة بعد.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DELIVERY VIEW -->
+        <div id="view-delivery" class="view-section hidden">
+            <div class="classic-panel">
+                <h2 class="section-title">معلومات التوصيل</h2>
+                <div class="info-card">
+                    <p>🚗 خدمة التوصيل متوفرة لجميع المناطق المحيطة بمعدل وسرعة عالية.</p>
+                    <p>⏱️ أوقات التوصيل: من الساعة 4:00 عصراً وحتى 12:00 منتصف الليل.</p>
+                    <p>💰 يتم حساب تكلفة التوصيل تلقائياً بحسب مسافة العنوان عن المقهى.</p>
+                    <p>📞 للاستفسارات العاجلة بخصوص طلبيتك، يرجى التواصل مع الدعم الفني مباشرة.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOCATION VIEW -->
+        <div id="view-location" class="view-section hidden">
+            <div class="classic-panel">
+                <h2 class="section-title">موقعنا الجغرافي</h2>
+                <div class="info-card">
+                    <p>📍 الجلسة الرئيسية: سوالف على الحطب - عمان، الأردن</p>
+                    <p>🔥 نرحب بكم دائماً في مجلسنا التراثي لتناول الشاي والذرة الساخنة على الحطب الطبيعي.</p>
+                    <div class="map-placeholder">
+                        <a href="https://www.google.com/maps?q=31.95,35.91" target="_blank" class="map-link-btn">📍 افتح الموقع على خرائط جوجل</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTACT VIEW -->
+        <div id="view-contact" class="view-section hidden">
+            <div class="classic-panel">
+                <h2 class="section-title">اتصل بنا</h2>
+                <div class="info-card">
+                    <p>📞 رقم الهاتف المباشر: <a href="tel:0792928583" class="gold-text">0792928583</a></p>
+                    <p>💬 للاستفسارات السريعة، يسعدنا تواصلكم معنا عبر حساباتنا الرسمية في منصات التواصل الاجتماعي الموضحة في الأسفل.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS VIEW (ADMIN) -->
+        <div id="view-settings" class="view-section hidden">
+            <div class="classic-panel">
+                <h2 class="section-title">الإعدادات</h2>
+
+                <div id="adminLoginBox">
+                    <p class="settings-note">هذه الصفحة مخصصة لصاحب المتجر. الرجاء إدخال كلمة المرور:</p>
+                    <div class="form-group">
+                        <input type="password" id="adminPass" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')adminLogin()">
+                    </div>
+                    <button class="cart-send" onclick="adminLogin()">دخول لوحة الإدارة</button>
+                </div>
+
+                <div id="adminPanel" class="hidden">
+                    <div class="settings-tabs">
+                        <button class="settings-tab active" id="tab-pricing" onclick="showSettingsTab('pricing')">💰 التسعير</button>
+                        <button class="settings-tab" id="tab-customers" onclick="showSettingsTab('customers')">👥 العملاء والطلبات</button>
+                    </div>
+
+                    <!-- Pricing tab -->
+                    <div id="settingsPricing" class="settings-tab-content"></div>
+
+                    <!-- Customers tab -->
+                    <div id="settingsCustomers" class="settings-tab-content hidden">
+                        <button class="cart-back-to-items" onclick="loadCustomers()" style="margin-bottom:15px;">🔄 تحديث الطلبات</button>
+                        <div id="customersListContainer">
+                            <p class="empty-message">لا توجد طلبات مسجلة بعد.</p>
+                        </div>
+                    </div>
+
+                    <button class="cart-back-to-items" onclick="adminLogout()" style="margin-top:20px;">🚪 تسجيل الخروج</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Cart Icon -->
+    <div class="cart-box" id="cartBox" onclick="openCart()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cart-icon">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        </svg>
+        <span class="cart-badge hidden" id="cartBadge">0</span>
+    </div>
+
+    <!-- Cart Overlay (Sliding Sidebar) -->
+    <div class="cart-overlay hidden" id="cartOverlay">
+        <div class="cart-panel">
+            <div class="cart-header">
+                <h2>سلة الطلبات</h2>
+                <button class="cart-close" onclick="closeCart()">✕</button>
+            </div>
+
+            <div class="cart-body" id="cartBody">
+                <p class="cart-empty">لا توجد طلبات</p>
+            </div>
+
+            <div class="cart-body hidden" id="checkoutBody">
+                <h3 class="checkout-title">معلومات التوصيل</h3>
+                <div class="checkout-form">
+                    <div class="form-group">
+                        <label for="custName">الاسم</label>
+                        <input type="text" id="custName" placeholder="اكتب اسمك الثنائي">
+                    </div>
+                    <div class="form-group">
+                        <label for="custPhone">رقم التلفون</label>
+                        <input type="tel" id="custPhone" placeholder="مثال: 05XXXXXXXX">
+                    </div>
+                    <div class="form-group">
+                        <label for="custAddress">العنوان</label>
+                        <textarea id="custAddress" placeholder="اسم الحي، الشارع، المعالم القريبة..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>الموقع عبر الخريطة (Google Maps)</label>
+                        <div class="location-input-wrapper">
+                            <input type="text" id="custLocation" placeholder="لصق رابط موقعك أو حدده تلقائياً">
+                            <button type="button" class="btn-gps" onclick="getCurrentGPS()" title="تحديد موقعي الحالي تلقائياً">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+                                    <circle cx="12" cy="10" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button class="cart-send" onclick="submitCheckout()">تأكيد وإرسال الطلب</button>
+                    <button class="cart-back-to-items" onclick="showCartItems()">العودة لتعديل الطلبات</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tea/Menu Options Overlay -->
+    <div class="menu-overlay hidden" id="menuOverlay">
+        <div class="menu-panel" id="menuPanel">
+            <div class="menu-header">
+                <button class="menu-back-btn hidden" id="menuBackBtn" onclick="handleBack()" title="رجوع">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+                <h2 id="menuTitle">شاي</h2>
+                <button class="menu-close-btn" onclick="closeMenu()" title="إغلاق">✕</button>
+            </div>
+            <div class="step-indicator" id="stepIndicator"></div>
+            <div class="menu-body" id="menuBody"></div>
+        </div>
+    </div>
+
+    <!-- Social Links -->
+    <div class="social">
+        <a href="https://www.instagram.com/sawalif_alhatab?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" class="social-icon" title="انستقرام">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                <rect x="2" y="2" width="20" height="20" rx="5"/>
+                <circle cx="12" cy="12" r="5"/>
+                <circle cx="17.5" cy="6.5" r="1.5"/>
+            </svg>
+        </a>
+        <a href="https://www.facebook.com/profile.php?id=61579113160515" target="_blank" class="social-icon" title="فيسبوك">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M16 8h-2a2 2 0 0 0-2 2v10M12 12h4"/>
+            </svg>
+        </a>
+    </div>
+
+    <script>
+        // Register Service Worker for cache-first performance
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+
+        // ===== State =====
+        let currentItem = '';
+        let currentOrder = {};
+        let cart = [];          // { item, note, img, price }
+        let stepHistory = [];
+        let currentStepIndex = 0;
+        let prices = { shay: 0, dhrah: {}, bushar: {} };
+        let adminToken = localStorage.getItem('sawalif_admin_token') || '';
+
+        const menuData = {
+            shay: {
+                title: 'شاي حطب',
+                steps: [
+                    {
+                        question: 'اختر نوع الشاي',
+                        options: [
+                            { label: 'شاي كرك', value: 'كرك', img: 'kerk.png' },
+                            { label: 'شاي عادي', value: 'عادي', img: 'ady.png' }
+                        ]
+                    },
+                    {
+                        question: 'اختر نسبة السكر',
+                        options: [
+                            { label: 'حلوة', value: 'حلوة' },
+                            { label: 'وسط', value: 'وسط' },
+                            { label: 'سادة', value: 'سادة' }
+                        ]
+                    },
+                    {
+                        question: 'اختر الإضافات',
+                        skipIf: () => currentOrder.type === 'كرك',
+                        options: [
+                            { label: 'شاي بالنعنع', value: 'نعناع' },
+                            { label: 'شاي بالميرمية', value: 'ميرمية' },
+                            { label: 'بدون إضافات', value: 'بدون إضافات' }
+                        ]
+                    }
+                ]
+            },
+            dhrah: {
+                title: 'ذرة على الحطب',
+                steps: [
+                    {
+                        question: 'اختر حجم العبوة',
+                        options: [
+                            { label: 'كأس كبير', value: 'كبير' },
+                            { label: 'كأس وسط', value: 'وسط' }
+                        ]
+                    },
+                    {
+                        question: 'اختر النكهة والإضافات',
+                        options: [
+                            { label: 'زبدة وملح', value: 'زبدة وملح' },
+                            { label: 'ليمون وبابريكا حارة', value: 'ليمون وبابريكا' },
+                            { label: 'سادة (بدون إضافات)', value: 'سادة' }
+                        ]
+                    }
+                ]
+            },
+            bushar: {
+                title: 'بوشار حطب',
+                steps: [
+                    {
+                        question: 'اختر حجم العبوة',
+                        options: [
+                            { label: 'عائلي كبير', value: 'كبير' },
+                            { label: 'وسط', value: 'وسط' }
+                        ]
+                    },
+                    {
+                        question: 'اختر نكهة البوشار',
+                        options: [
+                            { label: 'نكهة الملح التقليدية', value: 'ملح' },
+                            { label: 'نكهة الجبنة اللذيذة', value: 'جبنة' },
+                            { label: 'نكهة الكراميل المقرمش', value: 'كراميل' }
+                        ]
+                    }
+                ]
+            }
+        };
+
+        // ===== Backend helpers =====
+        async function api(path, options) {
+            options = options || {};
+            options.headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+            const res = await fetch(path, options);
+            let data = {};
+            try { data = await res.json(); } catch (e) {}
+            return { ok: res.ok, status: res.status, data };
+        }
+
+        async function loadPrices() {
+            try {
+                const r = await api('/api/products');
+                if (r.ok && r.data.prices) {
+                    prices = r.data.prices;
+                    updateCardPrices();
+                }
+            } catch (e) { /* offline fallback: use defaults */ }
+        }
+
+        function fmt(v) {
+            return Number(v).toFixed(2) + ' د.أ';
+        }
+
+        function priceFor(item, order) {
+            if (item === 'shay') return Number(prices.shay) || 0;
+            if (item === 'dhrah') return Number(prices.dhrah && prices.dhrah[order.size]) || 0;
+            if (item === 'bushar') return Number(prices.bushar && prices.bushar[order.size]) || 0;
+            return 0;
+        }
+
+        function updateCardPrices() {
+            const setPrice = (id, txt) => { const el = document.getElementById('price-' + id); if (el) el.textContent = txt; };
+            setPrice('shay', prices.shay ? fmt(prices.shay) : '');
+            const dPrices = Object.values(prices.dhrah || {}).filter(v => !isNaN(v));
+            setPrice('dhrah', dPrices.length ? 'من ' + fmt(Math.min(...dPrices)) : '');
+            const bPrices = Object.values(prices.bushar || {}).filter(v => !isNaN(v));
+            setPrice('bushar', bPrices.length ? 'من ' + fmt(Math.min(...bPrices)) : '');
+        }
+
+        // ===== Drawer =====
+        function openDrawer() { document.getElementById('drawer').classList.add('open'); document.getElementById('drawerOverlay').classList.remove('hidden'); }
+        function closeDrawer() { document.getElementById('drawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.add('hidden'); }
+
+        function navTo(page) {
+            const sections = document.querySelectorAll('.view-section');
+            sections.forEach(s => s.classList.add('hidden'));
+            const target = document.getElementById('view-' + page);
+            if (target) target.classList.remove('hidden');
+            if (page === 'orders') loadMyOrders();
+            if (page === 'settings') onEnterSettings();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ===== Menu / Ordering flow =====
+        function openMenu(item) {
+            const data = menuData[item];
+            if (!data) return;
+            currentItem = item;
+            document.getElementById('menuOverlay').classList.remove('hidden');
+            document.getElementById('menuTitle').textContent = data.title;
+            currentOrder = {};
+            stepHistory = [];
+            renderStep(0);
+        }
+
+        function renderStepIndicator(stepIndex, totalSteps) {
+            const container = document.getElementById('stepIndicator');
+            container.innerHTML = '';
+            for (let i = 0; i < totalSteps; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'step-dot';
+                if (i === stepIndex) dot.classList.add('active');
+                else if (i < stepIndex) dot.classList.add('completed');
+                container.appendChild(dot);
+                if (i < totalSteps - 1) {
+                    const line = document.createElement('div');
+                    line.className = 'step-line';
+                    if (i < stepIndex) line.classList.add('completed');
+                    container.appendChild(line);
+                }
+            }
+        }
+
+        function renderStep(stepIndex) {
+            currentStepIndex = stepIndex;
+            const data = menuData[currentItem];
+            const step = data.steps[stepIndex];
+            if (!step) return;
+
+            renderStepIndicator(stepIndex, data.steps.length);
+
+            const backBtn = document.getElementById('menuBackBtn');
+            if (stepHistory.length > 0) backBtn.classList.remove('hidden');
+            else backBtn.classList.add('hidden');
+
+            const body = document.getElementById('menuBody');
+            body.innerHTML = '';
+
+            const question = document.createElement('p');
+            question.className = 'menu-question';
+            question.textContent = step.question;
+            body.appendChild(question);
+
+            const grid = document.createElement('div');
+            grid.className = 'menu-grid';
+            const hasImages = step.options.some(opt => opt.img);
+            if (!hasImages) grid.classList.add('grid-text');
+
+            step.options.forEach((opt) => {
+                const card = document.createElement('button');
+                card.className = 'menu-option';
+                if (stepIndex === 0 && currentOrder.type === opt.value) card.classList.add('selected');
+                if (stepIndex === 1 && currentOrder.sugar === opt.value) card.classList.add('selected');
+                if (stepIndex === 2 && currentOrder.addon === opt.value) card.classList.add('selected');
+
+                if (opt.img) {
+                    const imgWrapper = document.createElement('div');
+                    imgWrapper.className = 'menu-opt-img-wrapper';
+                    const img = document.createElement('img');
+                    img.src = opt.img; img.alt = opt.label; img.className = 'menu-opt-img';
+                    imgWrapper.appendChild(img);
+                    card.appendChild(imgWrapper);
+                }
+                const span = document.createElement('span');
+                span.className = 'menu-opt-label';
+                span.textContent = opt.label;
+                card.appendChild(span);
+
+                card.onclick = () => {
+                    if (currentItem === 'shay') {
+                        if (stepIndex === 0) currentOrder.type = opt.value;
+                        else if (stepIndex === 1) currentOrder.sugar = opt.value;
+                        else currentOrder.addon = opt.value;
+                    } else if (currentItem === 'dhrah') {
+                        if (stepIndex === 0) currentOrder.size = opt.value;
+                        else currentOrder.flavor = opt.value;
+                    } else if (currentItem === 'bushar') {
+                        if (stepIndex === 0) currentOrder.size = opt.value;
+                        else currentOrder.flavor = opt.value;
+                    }
+
+                    stepHistory.push(stepIndex);
+                    let next = stepIndex + 1;
+                    if (next < data.steps.length && data.steps[next].skipIf && data.steps[next].skipIf()) next++;
+                    if (next < data.steps.length) {
+                        body.style.opacity = 0;
+                        setTimeout(() => { renderStep(next); body.style.opacity = 1; }, 150);
+                    } else {
+                        body.style.opacity = 0;
+                        setTimeout(() => { showOrder(); body.style.opacity = 1; }, 150);
+                    }
+                };
+                grid.appendChild(card);
+            });
+            body.appendChild(grid);
+        }
+
+        function handleBack() {
+            if (stepHistory.length === 0) return;
+            const prevStep = stepHistory.pop();
+            const body = document.getElementById('menuBody');
+            body.style.opacity = 0;
+            setTimeout(() => { renderStep(prevStep); body.style.opacity = 1; }, 150);
+        }
+
+        function showOrder() {
+            const container = document.getElementById('stepIndicator');
+            container.innerHTML = '';
+            const dot = document.createElement('div');
+            dot.className = 'step-dot active completed';
+            container.appendChild(dot);
+
+            const body = document.getElementById('menuBody');
+            body.innerHTML = '';
+
+            let summary = '';
+            if (currentItem === 'shay') {
+                summary = 'شاي ' + currentOrder.type + ' | سكر ' + currentOrder.sugar;
+                if (currentOrder.addon && currentOrder.addon !== 'بدون إضافات') summary += ' | ' + currentOrder.addon;
+            } else if (currentItem === 'dhrah') {
+                summary = 'ذرة حطب (' + currentOrder.size + ') | ' + currentOrder.flavor;
+            } else if (currentItem === 'bushar') {
+                summary = 'بوشار حطب (' + currentOrder.size + ') | نكهة ' + currentOrder.flavor;
+            }
+
+            const done = document.createElement('p');
+            done.className = 'menu-done';
+            done.textContent = summary;
+            body.appendChild(done);
+
+            const priceTag = document.createElement('p');
+            priceTag.className = 'menu-price-tag';
+            priceTag.textContent = 'السعر: ' + fmt(priceFor(currentItem, currentOrder));
+            body.appendChild(priceTag);
+
+            const noteLabel = document.createElement('p');
+            noteLabel.className = 'menu-note-label';
+            noteLabel.textContent = 'أضف ملاحظتك الخاصة (اختياري)';
+            body.appendChild(noteLabel);
+
+            const noteInput = document.createElement('textarea');
+            noteInput.className = 'menu-note';
+            noteInput.placeholder = 'مثال: سكر خفيف جداً، بدون ملح، إلخ...';
+            noteInput.id = 'orderNote';
+            body.appendChild(noteInput);
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'menu-confirm';
+            confirmBtn.textContent = 'إضافة إلى سلة الطلبات';
+            confirmBtn.onclick = () => {
+                const note = document.getElementById('orderNote').value;
+                let imgUrl = '';
+                if (currentItem === 'shay') imgUrl = currentOrder.type === 'كرك' ? 'kerk.png' : 'ady.png';
+                else if (currentItem === 'dhrah') imgUrl = 'dhrah.png';
+                else if (currentItem === 'bushar') imgUrl = 'bushar.png';
+                cart.push({ item: summary, note: note, img: imgUrl, price: priceFor(currentItem, currentOrder) });
+                updateCartBadge();
+                closeMenu();
+            };
+            body.appendChild(confirmBtn);
+        }
+
+        function closeMenu() { document.getElementById('menuOverlay').classList.add('hidden'); }
+        document.getElementById('menuOverlay').addEventListener('click', function (e) { if (e.target === this) closeMenu(); });
+
+        // ===== Cart =====
+        function updateCartBadge() {
+            const badge = document.getElementById('cartBadge');
+            badge.textContent = cart.length;
+            if (cart.length > 0) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+        }
+
+        function showCheckoutForm() {
+            document.getElementById('cartBody').classList.add('hidden');
+            document.getElementById('checkoutBody').classList.remove('hidden');
+        }
+        function showCartItems() {
+            document.getElementById('checkoutBody').classList.add('hidden');
+            document.getElementById('cartBody').classList.remove('hidden');
+        }
+
+        function openCart() {
+            showCartItems();
+            const body = document.getElementById('cartBody');
+            body.innerHTML = '';
+            if (cart.length === 0) {
+                body.innerHTML = '<p class="cart-empty">لا توجد أي طلبات حالياً</p>';
+            } else {
+                cart.forEach((o, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'cart-item';
+                    div.innerHTML = '<img src="' + o.img + '" class="cart-item-img" alt="">' +
+                        '<div class="cart-item-details">' +
+                        '<span class="cart-item-text">' + o.item + '</span>' +
+                        (o.note ? '<span class="cart-item-note">ملاحظة: ' + o.note + '</span>' : '') +
+                        '<span class="cart-item-price">' + fmt(o.price) + '</span>' +
+                        '</div>' +
+                        '<button class="cart-item-del" onclick="removeOrder(' + i + ')" title="حذف">✕</button>';
+                    body.appendChild(div);
+                });
+                const total = document.createElement('p');
+                total.className = 'cart-total';
+                total.textContent = 'الإجمالي: ' + fmt(cart.reduce((s, o) => s + (o.price || 0), 0));
+                body.appendChild(total);
+
+                const proceedBtn = document.createElement('button');
+                proceedBtn.className = 'cart-send';
+                proceedBtn.textContent = 'متابعة وتأكيد الطلب ⬅';
+                proceedBtn.onclick = showCheckoutForm;
+                body.appendChild(proceedBtn);
+            }
+            document.getElementById('cartOverlay').classList.remove('hidden');
+        }
+
+        function closeCart() { document.getElementById('cartOverlay').classList.add('hidden'); }
+        document.getElementById('cartOverlay').addEventListener('click', function (e) { if (e.target === this) closeCart(); });
+
+        function removeOrder(index) {
+            cart.splice(index, 1);
+            updateCartBadge();
+            openCart();
+        }
+
+        function getCurrentGPS() {
+            const gpsBtn = document.querySelector('.btn-gps');
+            gpsBtn.style.opacity = '0.6'; gpsBtn.disabled = true;
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude, lng = position.coords.longitude;
+                    document.getElementById('custLocation').value = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+                    gpsBtn.style.opacity = '1'; gpsBtn.disabled = false;
+                }, () => { alert("تعذر تحديد موقعك. فعّل الـ GPS أو الصق الرابط يدوياً."); gpsBtn.style.opacity = '1'; gpsBtn.disabled = false; }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
+            } else { alert("المتصفح لا يدعم تحديد الموقع."); gpsBtn.style.opacity = '1'; gpsBtn.disabled = false; }
+        }
+
+        async function submitCheckout() {
+            const name = document.getElementById('custName').value.trim();
+            const phone = document.getElementById('custPhone').value.trim();
+            const address = document.getElementById('custAddress').value.trim();
+            const location = document.getElementById('custLocation').value.trim();
+
+            if (!name || !phone || !address) { alert("يرجى ملء الاسم والهاتف والعنوان."); return; }
+            const phoneRegex = /^07\d{8}$/;
+            if (!phoneRegex.test(phone)) { alert("رقم هاتف غير صحيح (10 أرقام يبدأ بـ 07)."); return; }
+            if (cart.length === 0) { alert("سلتك فارغة."); return; }
+
+            const order = {
+                name, phone, address, location,
+                items: cart.map(o => ({ text: o.item, note: o.note, price: o.price }))
+            };
+
+            try {
+                const r = await api('/api/orders', { method: 'POST', body: JSON.stringify(order) });
+                if (r.ok) {
+                    localStorage.setItem('sawalif_myphone', phone);
+                    alert("تم إرسال الطلب بنجاح!");
+                    cart = []; updateCartBadge(); closeCart();
+                    navTo('orders');
+                } else {
+                    alert("تعذر إرسال الطلب: " + (r.data.error || 'خطأ غير معروف'));
+                }
+            } catch (e) {
+                alert("تعذر الاتصال بالسيرفر. تأكد من تشغيل الخادم.");
+            }
+        }
+
+        // ===== My Orders (customer) =====
+        async function loadMyOrders() {
+            const container = document.getElementById('ordersListContainer');
+            const myPhone = localStorage.getItem('sawalif_myphone');
+            container.innerHTML = '<p class="empty-message">جارٍ التحميل...</p>';
+            try {
+                const r = await api('/api/orders');
+                if (!r.ok) throw new Error();
+                const myOrders = (r.data.orders || []).filter(o => myPhone && o.phone === myPhone);
+                if (myOrders.length === 0) {
+                    container.innerHTML = '<p class="empty-message">لا توجد طلبات لك بعد. أضف طلباً من الرئيسية.</p>';
+                    return;
+                }
+                container.innerHTML = '';
+                myOrders.slice().reverse().forEach(ord => {
+                    const card = document.createElement('div');
+                    card.className = 'customer-order-card';
+                    card.innerHTML = '<div class="customer-order-body" style="display:block;">' +
+                        '<div class="customer-delivery-details"><p><strong>⏱️ التاريخ:</strong> ' + formatDate(ord.date) + '</p>' +
+                        (ord.address ? '<p><strong>📍 العنوان:</strong> ' + ord.address + '</p>' : '') + '</div>' +
+                        '<div class="customer-items-list">' +
+                        ord.items.map(i => '<div class="customer-item-row"><span class="item-date">• ' + (i.text || '') + (i.note ? ' (ملاحظة: ' + i.note + ')' : '') + '</span><span class="cart-item-price">' + fmt(i.price || 0) + '</span></div>').join('') +
+                        '</div></div>';
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                container.innerHTML = '<p class="empty-message">تعذر تحميل الطلبات. تأكد من تشغيل السيرفر.</p>';
+            }
+        }
+
+        function formatDate(iso) {
+            try { return new Date(iso).toLocaleString('ar-EG'); } catch (e) { return iso; }
+        }
+
+        // ===== Settings / Admin =====
+        function onEnterSettings() {
+            if (adminToken) {
+                document.getElementById('adminLoginBox').classList.add('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                renderPricing();
+                loadCustomers();
+            } else {
+                document.getElementById('adminLoginBox').classList.remove('hidden');
+                document.getElementById('adminPanel').classList.add('hidden');
+            }
+        }
+
+        async function adminLogin() {
+            const pw = document.getElementById('adminPass').value;
+            try {
+                const r = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password: pw }) });
+                if (r.ok && r.data.token) {
+                    adminToken = r.data.token;
+                    localStorage.setItem('sawalif_admin_token', adminToken);
+                    document.getElementById('adminPass').value = '';
+                    onEnterSettings();
+                } else {
+                    alert('كلمة المرور غير صحيحة');
+                }
+            } catch (e) {
+                alert('تعذر الاتصال بالسيرفر.');
+            }
+        }
+
+        function adminLogout() {
+            adminToken = '';
+            localStorage.removeItem('sawalif_admin_token');
+            onEnterSettings();
+        }
+
+        function showSettingsTab(tab) {
+            document.getElementById('tab-pricing').classList.toggle('active', tab === 'pricing');
+            document.getElementById('tab-customers').classList.toggle('active', tab === 'customers');
+            document.getElementById('settingsPricing').classList.toggle('hidden', tab !== 'pricing');
+            document.getElementById('settingsCustomers').classList.toggle('hidden', tab !== 'customers');
+            if (tab === 'customers') loadCustomers();
+        }
+
+        function renderPricing() {
+            const container = document.getElementById('settingsPricing');
+            container.innerHTML = '';
+            const cats = [
+                { id: 'shay', name: 'شاي حطب' },
+                { id: 'dhrah', name: 'ذرة على الحطب' },
+                { id: 'bushar', name: 'بوشار حطب' }
+            ];
+            cats.forEach(cat => {
+                const val = prices[cat.id];
+                const block = document.createElement('div');
+                block.className = 'price-block';
+                let html = '<h3>' + cat.name + '</h3>';
+                if (typeof val === 'number') {
+                    html += '<div class="form-group"><label>السعر (د.أ)</label><input type="number" step="0.1" min="0" data-cat="' + cat.id + '" data-key="_base" value="' + val + '"></div>';
+                } else {
+                    Object.keys(val || {}).forEach(k => {
+                        html += '<div class="form-group"><label>' + k + ' (د.أ)</label><input type="number" step="0.1" min="0" data-cat="' + cat.id + '" data-key="' + k + '" value="' + val[k] + '"></div>';
+                    });
+                }
+                block.innerHTML = html;
+                container.appendChild(block);
+            });
+            const save = document.createElement('button');
+            save.className = 'cart-send';
+            save.textContent = '💾 حفظ الأسعار';
+            save.onclick = savePricing;
+            container.appendChild(save);
+        }
+
+        async function savePricing() {
+            const inputs = document.querySelectorAll('#settingsPricing input[data-cat]');
+            const newPrices = JSON.parse(JSON.stringify(prices));
+            inputs.forEach(inp => {
+                const cat = inp.dataset.cat, key = inp.dataset.key, v = parseFloat(inp.value) || 0;
+                if (key === '_base') newPrices[cat] = v;
+                else newPrices[cat][key] = v;
+            });
+            try {
+                const r = await api('/api/products', { method: 'PUT', headers: { 'Authorization': 'Bearer ' + adminToken }, body: JSON.stringify({ prices: newPrices }) });
+                if (r.ok) {
+                    prices = r.data.prices;
+                    updateCardPrices();
+                    alert('تم حفظ الأسعار بنجاح.');
+                } else if (r.status === 401) {
+                    alert('انتهت الجلسة. سجّل الدخول مجدداً.');
+                    adminLogout();
+                } else {
+                    alert('تعذر الحفظ.');
+                }
+            } catch (e) {
+                alert('تعذر الاتصال بالسيرفر.');
+            }
+        }
+
+        async function loadCustomers() {
+            const container = document.getElementById('customersListContainer');
+            container.innerHTML = '<p class="empty-message">جارٍ التحميل...</p>';
+            try {
+                const r = await api('/api/orders', { headers: { 'Authorization': 'Bearer ' + adminToken } });
+                if (r.status === 401) { adminLogout(); return; }
+                if (!r.ok) throw new Error();
+                const all = r.data.orders || [];
+                if (all.length === 0) { container.innerHTML = '<p class="empty-message">لا توجد طلبات مسجلة بعد.</p>'; return; }
+
+                const groups = {};
+                all.forEach(order => {
+                    const key = order.name + '|||' + order.phone;
+                    if (!groups[key]) groups[key] = { name: order.name, phone: order.phone, address: order.address, location: order.location, ordersList: [] };
+                    groups[key].ordersList.push(order);
+                });
+
+                container.innerHTML = '';
+                Object.keys(groups).forEach(key => {
+                    const group = groups[key];
+                    const card = document.createElement('div');
+                    card.className = 'customer-order-card';
+                    const header = document.createElement('div');
+                    header.className = 'customer-order-header';
+                    header.innerHTML = '<div class="customer-info"><span class="customer-name">👤 ' + group.name + '</span><span class="customer-phone">📞 ' + group.phone + '</span></div><span class="orders-count">' + group.ordersList.length + ' طلبات ▾</span>';
+                    const body = document.createElement('div');
+                    body.className = 'customer-order-body hidden';
+                    body.innerHTML = '<div class="customer-delivery-details"><p><strong>📍 العنوان:</strong> ' + group.address + '</p>' +
+                        (group.location ? '<p><strong>🗺️ رابط الموقع:</strong> <a href="' + group.location + '" target="_blank" class="maps-link">فتح على الخريطة ↗</a></p>' : '') + '</div>';
+                    const list = document.createElement('div');
+                    list.className = 'customer-items-list';
+                    group.ordersList.forEach(ord => {
+                        const row = document.createElement('div');
+                        row.className = 'customer-item-row';
+                        row.innerHTML = '<span class="item-date">⏱️ ' + formatDate(ord.date) + '</span><div class="item-products-list">' +
+                            ord.items.map(i => '• ' + (i.text || '') + (i.note ? ' (ملاحظة: ' + i.note + ')' : '') + ' — <strong>' + fmt(i.price || 0) + '</strong>').join('<br>') +
+                            '</div>';
+                        list.appendChild(row);
+                    });
+                    body.appendChild(list);
+                    header.onclick = () => body.classList.toggle('hidden');
+                    card.appendChild(header); card.appendChild(body);
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                container.innerHTML = '<p class="empty-message">تعذر تحميل الطلبات.</p>';
+            }
+        }
+
+        // ===== Init =====
+        loadPrices();
+        updateCartBadge();
+    </script>
+</body>
+</html>
