@@ -54,12 +54,60 @@ function orderMsg(order) {
         '💰 <b>الإجمالي:</b> ' + total + ' د.أ';
 }
 
-function errorMsg(err) {
-    return '🚨 <b>خطأ في السيرفر!</b>\n\n' + String(err);
+function complaintMsg(complaint) {
+    return '📩 <b>شكاوى / رسالة من عميل!</b>\n\n' +
+        '👤 <b>الاسم:</b> ' + (complaint.name || '') + '\n' +
+        '📞 <b>الهاتف:</b> ' + (complaint.phone || 'غير متوفر') + '\n' +
+        '💬 <b>الرسالة:</b>\n' + (complaint.message || '');
 }
 
-function adminLoginMsg(ip) {
-    return '🔐 <b>دخول لوحة الإدارة</b>\n\n' + '📡 IP: ' + (ip || 'غير معروف');
+function todayStatsMsg(stats) {
+    if (!stats) return '📊 <b>إحصائيات اليوم:</b>\n\nلا توجد بيانات بعد.';
+    const items = stats.items || {};
+    const sorted = Object.entries(items).sort((a, b) => b[1] - a[1]);
+    const topItem = sorted.length > 0 ? sorted[0][0] : 'لا يوجد';
+    const topCount = sorted.length > 0 ? sorted[0][1] : 0;
+    let itemsList = sorted.map(([name, count], i) => '  ' + (i + 1) + '. ' + name + ' — ' + count + ' مرة').join('\n');
+    return '📊 <b>إحصائيات اليوم:</b>\n\n' +
+        '👀 <b>الزوار:</b> ' + (stats.visitors || 0) + '\n' +
+        '🛒 <b>الطلبات:</b> ' + (stats.orders || 0) + '\n' +
+        '🏆 <b>أكثر منتج طلب:</b> ' + topItem + ' (' + topCount + ' مرة)\n\n' +
+        (itemsList ? '📋 <b>تفاصيل الطلبات:</b>\n' + itemsList : '');
+}
+
+function reportMsg(db) {
+    const keys = Object.keys(db.dailyStats || {}).sort().reverse().slice(0, 7);
+    if (keys.length === 0) return '📊 <b>التقرير:</b>\n\nلا توجد بيانات.';
+    let report = '📊 <b>تقرير آخر ' + keys.length + ' أيام:</b>\n\n';
+    let totalVisitors = 0, totalOrders = 0;
+    keys.forEach(day => {
+        const s = db.dailyStats[day];
+        totalVisitors += s.visitors || 0;
+        totalOrders += s.orders || 0;
+        report += '📅 <b>' + day + '</b>\n';
+        report += '  👀 زوار: ' + (s.visitors || 0) + ' | 🛒 طلبات: ' + (s.orders || 0) + '\n\n';
+    });
+    report += '━━━━━━━━━━━━━━━━\n';
+    report += '📈 <b>الإجمالي:</b>\n';
+    report += '  👀 زوار: ' + totalVisitors + '\n';
+    report += '  🛒 طلبات: ' + totalOrders + '\n';
+    return report;
+}
+
+function complaintsListMsg(complaints) {
+    if (!complaints || complaints.length === 0) return '📩 <b>الشكاوى:</b>\n\nلا توجد شكاوى.';
+    const recent = complaints.slice(-10).reverse();
+    let msg = '📩 <b>آخر ' + recent.length + ' شكاوى:</b>\n\n';
+    recent.forEach((c, i) => {
+        msg += (i + 1) + '. <b>' + c.name + '</b>';
+        if (c.phone) msg += ' — 📞 ' + c.phone;
+        msg += '\n  💬 ' + c.message + '\n  📅 ' + new Date(c.date).toLocaleString('ar-EG') + '\n\n';
+    });
+    return msg;
+}
+
+function errorMsg(err) {
+    return '🚨 <b>خطأ في السيرفر!</b>\n\n' + String(err);
 }
 
 function priceUpdateMsg(admin, prices) {
@@ -83,4 +131,62 @@ function serverStartMsg(port) {
     return '🔥 <b>السيرفر شغّال!</b>\n\n' + '🌐 المنفذ: ' + port;
 }
 
-module.exports = { sendMessage, getUpdates, setChatId, getChatId, orderMsg, errorMsg, adminLoginMsg, priceUpdateMsg, orderDeletedMsg, stockUpdateMsg, serverStartMsg };
+function statsGeneralMsg(visitors, orders, revenue, complaints) {
+    return '📊 <b>إحصائيات عامة:</b>\n\n' +
+        '👀 إجمالي الزوار: ' + visitors + '\n' +
+        '🛒 إجمالي الطلبات: ' + orders + '\n' +
+        '💰 إجمالي الإيرادات: ' + revenue + ' د.أ\n' +
+        '📩 إجمالي الشكاوى: ' + complaints;
+}
+
+function ordersListMsg(orders) {
+    const recent = orders.slice(-5).reverse();
+    if (recent.length === 0) return '📦 لا توجد طلبات بعد.';
+    let msg = '📦 <b>آخر 5 طلبات:</b>\n\n';
+    recent.forEach((o, i) => {
+        msg += (i + 1) + '. ' + o.name + ' — ' + o.phone + ' (' + (o.items || []).length + ' منتجات)\n';
+    });
+    return msg;
+}
+
+function pricesMsg(prices) {
+    return '💰 <b>الأسعار الحالية:</b>\n\n' +
+        '☕ شاي: ' + prices.shay + ' د.أ\n' +
+        '🌽 ذرة كبير: ' + (prices.dhrah['\u0643\u0628\u064a\u0631'] || 0) + ' | وسط: ' + (prices.dhrah['\u0648\u0633\u0637'] || 0) + ' د.أ\n' +
+        '🍿 بوشار كبير: ' + (prices.bushar['\u0643\u0628\u064a\u0631'] || 0) + ' | وسط: ' + (prices.bushar['\u0648\u0633\u0637'] || 0) + ' د.أ\n' +
+        '\n💡 /setprice shay 2.0';
+}
+
+function stockMsg(stock) {
+    const mark = v => v ? '✅' : '❌';
+    return '📦 <b>توفر المنتجات:</b>\n\n' +
+        '☕ شاي: ' + mark(stock.shay) + '\n' +
+        '🌽 ذرة كبير: ' + mark(stock.dhrah['\u0643\u0628\u064a\u0631']) + ' | وسط: ' + mark(stock.dhrah['\u0648\u0633\u0637']) + '\n' +
+        '🍿 بوشار كبير: ' + mark(stock.bushar['\u0643\u0628\u064a\u0631']) + ' | وسط: ' + mark(stock.bushar['\u0648\u0633\u0637']) + '\n' +
+        '\n💡 /setstock shay off';
+}
+
+function helpMsg() {
+    return '🤖 <b>أوامر البوت:</b>\n\n' +
+        '/start — ربط المحادثة\n\n' +
+        '📊 <b>الإحصائيات:</b>\n' +
+        '/today — إحصائيات اليوم\n' +
+        '/report — تقرير آخر أسبوع\n' +
+        '/stats — إحصائيات عامة\n' +
+        '/orders — آخر الطلبات\n\n' +
+        '⚙️ <b>الإعدادات:</b>\n' +
+        '/prices — عرض الأسعار\n' +
+        '/setprice — تعديل السعر\n' +
+        '/stock — توفر المنتجات\n' +
+        '/setstock — تعديل التوفر\n' +
+        '/delete — حذف طلب\n\n' +
+        '📩 <b>العملاء:</b>\n' +
+        '/complaints — الشكاوى والرسائل';
+}
+
+module.exports = {
+    sendMessage, getUpdates, setChatId, getChatId,
+    orderMsg, complaintMsg, todayStatsMsg, reportMsg, complaintsListMsg, statsGeneralMsg,
+    ordersListMsg, pricesMsg, stockMsg, helpMsg,
+    errorMsg, priceUpdateMsg, orderDeletedMsg, stockUpdateMsg, serverStartMsg
+};

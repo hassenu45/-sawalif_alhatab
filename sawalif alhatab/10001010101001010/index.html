@@ -42,7 +42,7 @@
     </aside>
 
         <div class="main-content">
-            <img src="logo.png" alt="سوالف على الحطب" class="site-logo">
+            <img src="12.jpg" alt="سوالف على الحطب" class="site-logo">
             <h1 class="site-title">سوالف على الحطب</h1>
 
         <!-- HOME VIEW -->
@@ -116,6 +116,22 @@
                 <div class="info-card">
                     <p>📞 رقم الهاتف المباشر: <a href="tel:0792928583" class="gold-text">0792928583</a></p>
                     <p>💬 للاستفسارات السريعة، يسعدنا تواصلكم معنا عبر حساباتنا الرسمية في منصات التواصل الاجتماعي الموضحة في الأسفل.</p>
+                </div>
+                <div class="complaint-form" style="margin-top:25px;">
+                    <h3 style="color:#ffe5a3;font-family:'Reem Kufi',serif;margin-bottom:15px;border-bottom:1px dashed rgba(212,160,86,0.2);padding-bottom:10px;">📩 أرسل شكوى أو اقتراح</h3>
+                    <div class="form-group">
+                        <label>الاسم</label>
+                        <input type="text" id="complaintName" placeholder="اسمك">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم الهاتف (اختياري)</label>
+                        <input type="tel" id="complaintPhone" placeholder="07XXXXXXXX">
+                    </div>
+                    <div class="form-group">
+                        <label>رسالتك</label>
+                        <textarea id="complaintMessage" placeholder="اكتب شكواك أو اقتراحك هنا..." style="height:120px;"></textarea>
+                    </div>
+                    <button class="cart-send" onclick="submitComplaint()">إرسال الرسالة</button>
                 </div>
             </div>
         </div>
@@ -703,6 +719,29 @@
         // ===== Init =====
         loadPrices();
         updateCartBadge();
+        // Track visit
+        fetch('/api/visit', { method: 'POST' }).catch(() => {});
+
+        // ===== Complaints =====
+        async function submitComplaint() {
+            const name = document.getElementById('complaintName').value.trim();
+            const phone = document.getElementById('complaintPhone').value.trim();
+            const message = document.getElementById('complaintMessage').value.trim();
+            if (!name || !message) { alert('يرجى إدخال الاسم والرسالة.'); return; }
+            try {
+                const r = await api('/api/complaints', { method: 'POST', body: JSON.stringify({ name, phone, message }) });
+                if (r.ok) {
+                    alert('تم إرسال رسالتك بنجاح! شكراً لك.');
+                    document.getElementById('complaintName').value = '';
+                    document.getElementById('complaintPhone').value = '';
+                    document.getElementById('complaintMessage').value = '';
+                } else {
+                    alert('تعذر الإرسال: ' + (r.data.error || 'خطأ'));
+                }
+            } catch (e) {
+                alert('تعذر الاتصال بالسيرفر.');
+            }
+        }
     </script>
 </body>
 </html>
