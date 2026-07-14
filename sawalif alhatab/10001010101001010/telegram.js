@@ -5,9 +5,10 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 let CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 
 function sendMessage(text) {
-    if (!BOT_TOKEN || !CHAT_ID) return Promise.resolve();
+    if (!BOT_TOKEN) { console.error('[TG] No BOT_TOKEN set'); return Promise.resolve(); }
+    if (!CHAT_ID) { console.error('[TG] No CHAT_ID set - send /start to bot first'); return Promise.resolve(); }
     return new Promise((resolve, reject) => {
-        const payload = JSON.stringify({ chat_id: CHAT_ID, text, parse_mode: 'HTML' });
+        const payload = JSON.stringify({ chat_id: CHAT_ID, text: String(text), parse_mode: 'HTML' });
         const req = https.request({
             hostname: 'api.telegram.org',
             path: '/bot' + BOT_TOKEN + '/sendMessage',
@@ -16,7 +17,13 @@ function sendMessage(text) {
         }, res => {
             let body = '';
             res.on('data', c => body += c);
-            res.on('end', () => { try { resolve(JSON.parse(body)); } catch (e) { resolve({}); } });
+            res.on('end', () => {
+                try {
+                    const j = JSON.parse(body);
+                    if (!j.ok) console.error('[TG] send error:', j.description);
+                    resolve(j);
+                } catch (e) { resolve({}); }
+            });
         });
         req.on('error', reject);
         req.write(payload);
@@ -27,166 +34,150 @@ function sendMessage(text) {
 function getUpdates(offset) {
     if (!BOT_TOKEN) return Promise.resolve({ result: [] });
     return new Promise((resolve, reject) => {
-        const path = '/bot' + BOT_TOKEN + '/getUpdates?offset=' + (offset || 0) + '&timeout=5';
+        const path = '/bot' + BOT_TOKEN + '/getUpdates?offset=' + (offset || 0) + '&timeout=5&allowed_updates=%5B%22message%22%5D';
         https.get({ hostname: 'api.telegram.org', path }, res => {
             let body = '';
             res.on('data', c => body += c);
             res.on('end', () => { try { resolve(JSON.parse(body)); } catch (e) { resolve({ result: [] }); } });
-        }).on('error', reject);
+        }).on('error', e => { console.error('[TG] getUpdates error:', e.message); reject(e); });
     });
+}
+
+function clearUpdates() {
+    return getUpdates(-1).catch(() => {});
 }
 
 function setChatId(id) { CHAT_ID = String(id); }
 function getChatId() { return CHAT_ID; }
 
+function escape(text) {
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // ===== Message Builders =====
 function orderMsg(order) {
-    let items = (order.items || []).map((i, n) =>
-        '  ' + (n + 1) + '. ' + (i.text || '') + (i.note ? ' [' + i.note + ']' : '') + ' — ' + (i.price || 0) + ' د.أ'
+    const items = (order.items || []).map((i, n) =>
+        '  ' + (n + 1) + '. ' + (i.text || '') + (i.note ? ' [' + i.note + ']' : '') + ' — ' + (i.price || 0) + ' \u062f.\u0623'
     ).join('\n');
-    let total = (order.items || []).reduce((s, i) => s + (i.price || 0), 0);
-    return '🛒 <b>طلب جديد!</b>\n\n' +
-        '👤 <b>الاسم:</b> ' + (order.name || '') + '\n' +
-        '📞 <b>الهاتف:</b> ' + (order.phone || '') + '\n' +
-        '📍 <b>العنوان:</b> ' + (order.address || '') + '\n' +
-        (order.location ? '🗺️ <b>الموقع:</b> <a href="' + order.location + '">افتح على الخريطة</a>\n' : '') +
-        '\n📦 <b>المنتجات:</b>\n' + items + '\n\n' +
-        '💰 <b>الإجمالي:</b> ' + total + ' د.أ';
+    const total = (order.items || []).reduce((s, i) => s + (i.price || 0), 0);
+    return '\uD83D\uDE9C <b>\u0637\u0644\u0628 \u062c\u062f\u064a\u062f!</b>\n\n' +
+        '\uD83D\uDC64 <b>\u0627\u0644\u0627\u0633\u0645:</b> ' + (order.name || '') + '\n' +
+        '\uD83D\uDCDE <b>\u0627\u0644\u0647\u0627\u062a\u0641:</b> ' + (order.phone || '') + '\n' +
+        '\uD83D\uDCCD <b>\u0627\u0644\u0639\u0646\u0648\u0627\u0646:</b> ' + (order.address || '') + '\n' +
+        (order.location ? '\uD83D\uDCCD <b>\u0627\u0644\u0645\u0648\u0642\u0639:</b> <a href="' + order.location + '">\u0627\u0641\u062a\u062d \u0639\u0644\u0649 \u0627\u0644\u062e\u0631\u064a\u0637\u0629</a>\n' : '') +
+        '\n\uD83D\uDCE6 <b>\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a:</b>\n' + items + '\n\n' +
+        '\uD83D\uDCB0 <b>\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a:</b> ' + total + ' \u062f.\u0623';
 }
 
-function complaintMsg(complaint) {
-    return '📩 <b>شكاوى / رسالة من عميل!</b>\n\n' +
-        '👤 <b>الاسم:</b> ' + (complaint.name || '') + '\n' +
-        '📞 <b>الهاتف:</b> ' + (complaint.phone || 'غير متوفر') + '\n' +
-        '💬 <b>الرسالة:</b>\n' + (complaint.message || '');
+function complaintMsg(c) {
+    return '\uD83D\uDCE9 <b>\u0634\u0643\u0648\u0649 / \u0631\u0633\u0627\u0644\u0629 \u0645\u0646 \u0639\u0645\u064a\u0644!</b>\n\n' +
+        '\uD83D\uDC64 <b>\u0627\u0644\u0627\u0633\u0645:</b> ' + (c.name || '') + '\n' +
+        '\uD83D\uDCDE <b>\u0627\u0644\u0647\u0627\u062a\u0641:</b> ' + (c.phone || '\u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631') + '\n' +
+        '\uD83D\uDCAC <b>\u0627\u0644\u0631\u0633\u0627\u0644\u0629:</b>\n' + (c.message || '');
 }
 
-function todayStatsMsg(stats) {
-    if (!stats) return '📊 <b>إحصائيات اليوم:</b>\n\nلا توجد بيانات بعد.';
-    const items = stats.items || {};
+function todayStatsMsg(s) {
+    if (!s) return '\uD83D\uDCCA <b>\u0625\u062d\u0635\u0627\u0626\u064a\u0627\u062a \u0627\u0644\u064a\u0648\u0645:</b>\n\n\u0644\u0627 \u062a\u0648\u062c\u062f \u0628\u064a\u0627\u0646\u0627\u062a \u0628\u0639\u062f.';
+    const items = s.items || {};
     const sorted = Object.entries(items).sort((a, b) => b[1] - a[1]);
-    const topItem = sorted.length > 0 ? sorted[0][0] : 'لا يوجد';
+    const topItem = sorted.length > 0 ? sorted[0][0] : '\u0644\u0627 \u064a\u0648\u062c\u062f';
     const topCount = sorted.length > 0 ? sorted[0][1] : 0;
-    let itemsList = sorted.map(([name, count], i) => '  ' + (i + 1) + '. ' + name + ' — ' + count + ' مرة').join('\n');
-    return '📊 <b>إحصائيات اليوم:</b>\n\n' +
-        '👀 <b>الزوار:</b> ' + (stats.visitors || 0) + '\n' +
-        '🛒 <b>الطلبات:</b> ' + (stats.orders || 0) + '\n' +
-        '🏆 <b>أكثر منتج طلب:</b> ' + topItem + ' (' + topCount + ' مرة)\n\n' +
-        (itemsList ? '📋 <b>تفاصيل الطلبات:</b>\n' + itemsList : '');
+    const itemsList = sorted.map(([name, count], i) => '  ' + (i + 1) + '. ' + name + ' — ' + count + ' \u0645\u0631\u0629').join('\n');
+    return '\uD83D\uDCCA <b>\u0625\u062d\u0635\u0627\u0626\u064a\u0627\u062a \u0627\u0644\u064a\u0648\u0645:</b>\n\n' +
+        '\uD83D\uDC40 <b>\u0627\u0644\u0632\u0648\u0627\u0631:</b> ' + (s.visitors || 0) + '\n' +
+        '\uD83D\uDE9C <b>\u0627\u0644\u0637\u0644\u0628\u0627\u062a:</b> ' + (s.orders || 0) + '\n' +
+        '\uD83C\uDFC6 <b>\u0623\u0643\u062b\u0631 \u0645\u0646\u062a\u062c \u0637\u0644\u0628:</b> ' + topItem + ' (' + topCount + ' \u0645\u0631\u0629)\n\n' +
+        (itemsList ? '\uD83D\uDCCB <b>\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u0637\u0644\u0628\u0627\u062a:</b>\n' + itemsList : '');
 }
 
 function reportMsg(db) {
     const keys = Object.keys(db.dailyStats || {}).sort().reverse().slice(0, 7);
-    if (keys.length === 0) return '📊 <b>التقرير:</b>\n\nلا توجد بيانات.';
-    let report = '📊 <b>تقرير آخر ' + keys.length + ' أيام:</b>\n\n';
-    let totalVisitors = 0, totalOrders = 0;
+    if (keys.length === 0) return '\uD83D\uDCCA <b>\u0627\u0644\u062a\u0642\u0631\u064a\u0631:</b>\n\n\u0644\u0627 \u062a\u0648\u062c\u062f \u0628\u064a\u0627\u0646\u0627\u062a.';
+    let report = '\uD83D\uDCCA <b>\u062a\u0642\u0631\u064a\u0631 \u0622\u062e\u0631 ' + keys.length + ' \u0623\u064a\u0627\u0645:</b>\n\n';
+    let tv = 0, to = 0;
     keys.forEach(day => {
         const s = db.dailyStats[day];
-        totalVisitors += s.visitors || 0;
-        totalOrders += s.orders || 0;
-        report += '📅 <b>' + day + '</b>\n';
-        report += '  👀 زوار: ' + (s.visitors || 0) + ' | 🛒 طلبات: ' + (s.orders || 0) + '\n\n';
+        tv += s.visitors || 0;
+        to += s.orders || 0;
+        report += '\uD83D\uDCC5 <b>' + day + '</b>\n';
+        report += '  \uD83D\uDC40 \u0632\u0648\u0627\u0631: ' + (s.visitors || 0) + ' | \uD83D\uDE9C \u0637\u0644\u0628\u0627\u062a: ' + (s.orders || 0) + '\n\n';
     });
-    report += '━━━━━━━━━━━━━━━━\n';
-    report += '📈 <b>الإجمالي:</b>\n';
-    report += '  👀 زوار: ' + totalVisitors + '\n';
-    report += '  🛒 طلبات: ' + totalOrders + '\n';
+    report += '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n';
+    report += '\uD83D\uDCC8 <b>\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a:</b>\n';
+    report += '  \uD83D\uDC40 \u0632\u0648\u0627\u0631: ' + tv + '\n';
+    report += '  \uD83D\uDE9C \u0637\u0644\u0628\u0627\u062a: ' + to + '\n';
     return report;
 }
 
 function complaintsListMsg(complaints) {
-    if (!complaints || complaints.length === 0) return '📩 <b>الشكاوى:</b>\n\nلا توجد شكاوى.';
+    if (!complaints || complaints.length === 0) return '\uD83D\uDCE9 <b>\u0627\u0644\u0634\u0643\u0627\u0648\u064a:</b>\n\n\u0644\u0627 \u062a\u0648\u062c\u062f \u0634\u0643\u0627\u0648\u064a.';
     const recent = complaints.slice(-10).reverse();
-    let msg = '📩 <b>آخر ' + recent.length + ' شكاوى:</b>\n\n';
+    let msg = '\uD83D\uDCE9 <b>\u0622\u062e\u0631 ' + recent.length + ' \u0634\u0643\u0627\u0648\u064a:</b>\n\n';
     recent.forEach((c, i) => {
         msg += (i + 1) + '. <b>' + c.name + '</b>';
-        if (c.phone) msg += ' — 📞 ' + c.phone;
-        msg += '\n  💬 ' + c.message + '\n  📅 ' + new Date(c.date).toLocaleString('ar-EG') + '\n\n';
+        if (c.phone) msg += ' — \uD83D\uDCDE ' + c.phone;
+        msg += '\n  \uD83D\uDCAC ' + c.message + '\n  \uD83D\uDCC5 ' + new Date(c.date).toLocaleString('ar-EG') + '\n\n';
     });
     return msg;
 }
 
-function errorMsg(err) {
-    return '🚨 <b>خطأ في السيرفر!</b>\n\n' + String(err);
-}
-
-function priceUpdateMsg(admin, prices) {
-    return '💰 <b>تحديث الأسعار</b>\n\n' +
-        '👤 بواسطة: ' + (admin || 'مجهول') + '\n' +
-        '📊 الأسعار الجديدة:\n' +
-        JSON.stringify(prices, null, 2);
-}
-
-function orderDeletedMsg(id) {
-    return '🗑️ <b>حذف طلب</b>\n\n' + '📋 رقم الطلب: ' + id;
-}
-
-function stockUpdateMsg(item, size, available) {
-    return '📦 <b>تحديث التوفر</b>\n\n' +
-        '🏷️ المنتج: ' + item + (size ? ' (' + size + ')' : '') + '\n' +
-        '📊 الحالة: ' + (available ? '✅ متوفر' : '❌ غير متوفر');
-}
-
-function serverStartMsg(port) {
-    return '🔥 <b>السيرفر شغّال!</b>\n\n' + '🌐 المنفذ: ' + port;
-}
-
-function statsGeneralMsg(visitors, orders, revenue, complaints) {
-    return '📊 <b>إحصائيات عامة:</b>\n\n' +
-        '👀 إجمالي الزوار: ' + visitors + '\n' +
-        '🛒 إجمالي الطلبات: ' + orders + '\n' +
-        '💰 إجمالي الإيرادات: ' + revenue + ' د.أ\n' +
-        '📩 إجمالي الشكاوى: ' + complaints;
+function statsGeneralMsg(v, o, rev, c) {
+    return '\uD83D\uDCCA <b>\u0625\u062d\u0635\u0627\u0626\u064a\u0627\u062a \u0639\u0627\u0645\u0629:</b>\n\n' +
+        '\uD83D\uDC40 \u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0632\u0648\u0627\u0631: ' + v + '\n' +
+        '\uD83D\uDE9C \u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0637\u0644\u0628\u0627\u062a: ' + o + '\n' +
+        '\uD83D\uDCB0 \u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0625\u064a\u0631\u0627\u062f\u0627\u062a: ' + rev + ' \u062f.\u0623\n' +
+        '\uD83D\uDCE9 \u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0634\u0643\u0627\u0648\u064a: ' + c;
 }
 
 function ordersListMsg(orders) {
     const recent = orders.slice(-5).reverse();
-    if (recent.length === 0) return '📦 لا توجد طلبات بعد.';
-    let msg = '📦 <b>آخر 5 طلبات:</b>\n\n';
-    recent.forEach((o, i) => {
-        msg += (i + 1) + '. ' + o.name + ' — ' + o.phone + ' (' + (o.items || []).length + ' منتجات)\n';
-    });
+    if (recent.length === 0) return '\uD83D\uDE9C \u0644\u0627 \u062a\u0648\u062c\u062f \u0637\u0644\u0628\u0627\u062a \u0628\u0639\u062f.';
+    let msg = '\uD83D\uDE9C <b>\u0622\u062e\u0631 5 \u0637\u0644\u0628\u0627\u062a:</b>\n\n';
+    recent.forEach((o, i) => { msg += (i + 1) + '. ' + o.name + ' — ' + o.phone + ' (' + (o.items || []).length + ' \u0645\u0646\u062a\u062c\u0627\u062a)\n'; });
     return msg;
 }
 
-function pricesMsg(prices) {
-    return '💰 <b>الأسعار الحالية:</b>\n\n' +
-        '☕ شاي: ' + prices.shay + ' د.أ\n' +
-        '🌽 ذرة كبير: ' + (prices.dhrah['\u0643\u0628\u064a\u0631'] || 0) + ' | وسط: ' + (prices.dhrah['\u0648\u0633\u0637'] || 0) + ' د.أ\n' +
-        '🍿 بوشار كبير: ' + (prices.bushar['\u0643\u0628\u064a\u0631'] || 0) + ' | وسط: ' + (prices.bushar['\u0648\u0633\u0637'] || 0) + ' د.أ\n' +
-        '\n💡 /setprice shay 2.0';
+function pricesMsg(p) {
+    return '\uD83D\uDCB0 <b>\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u062d\u0627\u0644\u064a\u0629:</b>\n\n' +
+        '\u2615 \u0634\u0627\u064a: ' + p.shay + ' \u062f.\u0623\n' +
+        '\uD83C\uDF3D \u0630\u0631\u0629 \u0643\u0628\u064a\u0631: ' + (p.dhrah['\u0643\u0628\u064a\u0631'] || 0) + ' | \u0648\u0633\u0637: ' + (p.dhrah['\u0648\u0633\u0637'] || 0) + ' \u062f.\u0623\n' +
+        '\uD83C\uDF7F \u0628\u0648\u0634\u0627\u0631 \u0643\u0628\u064a\u0631: ' + (p.bushar['\u0643\u0628\u064a\u0631'] || 0) + ' | \u0648\u0633\u0637: ' + (p.bushar['\u0648\u0633\u0637'] || 0) + ' \u062f.\u0623\n' +
+        '\n\uD83D\uDCA1 /setprice shay 2.0';
 }
 
-function stockMsg(stock) {
-    const mark = v => v ? '✅' : '❌';
-    return '📦 <b>توفر المنتجات:</b>\n\n' +
-        '☕ شاي: ' + mark(stock.shay) + '\n' +
-        '🌽 ذرة كبير: ' + mark(stock.dhrah['\u0643\u0628\u064a\u0631']) + ' | وسط: ' + mark(stock.dhrah['\u0648\u0633\u0637']) + '\n' +
-        '🍿 بوشار كبير: ' + mark(stock.bushar['\u0643\u0628\u064a\u0631']) + ' | وسط: ' + mark(stock.bushar['\u0648\u0633\u0637']) + '\n' +
-        '\n💡 /setstock shay off';
+function stockMsg(s) {
+    const mark = v => v ? '\u2705' : '\u274C';
+    return '\uD83D\uDCE6 <b>\u062a\u0648\u0641\u0631 \u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a:</b>\n\n' +
+        '\u2615 \u0634\u0627\u064a: ' + mark(s.shay) + '\n' +
+        '\uD83C\uDF3D \u0630\u0631\u0629 \u0643\u0628\u064a\u0631: ' + mark(s.dhrah['\u0643\u0628\u064a\u0631']) + ' | \u0648\u0633\u0637: ' + mark(s.dhrah['\u0648\u0633\u0637']) + '\n' +
+        '\uD83C\uDF7F \u0628\u0648\u0634\u0627\u0631 \u0643\u0628\u064a\u0631: ' + mark(s.bushar['\u0643\u0628\u064a\u0631']) + ' | \u0648\u0633\u0637: ' + mark(s.bushar['\u0648\u0633\u0637']) + '\n' +
+        '\n\uD83D\uDCA1 /setstock shay off';
 }
 
 function helpMsg() {
-    return '🤖 <b>أوامر البوت:</b>\n\n' +
-        '/start — ربط المحادثة\n\n' +
-        '📊 <b>الإحصائيات:</b>\n' +
-        '/today — إحصائيات اليوم\n' +
-        '/report — تقرير آخر أسبوع\n' +
-        '/stats — إحصائيات عامة\n' +
-        '/orders — آخر الطلبات\n\n' +
-        '⚙️ <b>الإعدادات:</b>\n' +
-        '/prices — عرض الأسعار\n' +
-        '/setprice — تعديل السعر\n' +
-        '/stock — توفر المنتجات\n' +
-        '/setstock — تعديل التوفر\n' +
-        '/delete — حذف طلب\n\n' +
-        '📩 <b>العملاء:</b>\n' +
-        '/complaints — الشكاوى والرسائل';
+    return '\uD83E\uDD16 <b>\u0623\u0648\u0627\u0645\u0631 \u0627\u0644\u0628\u0648\u062a</b>\n\n' +
+        '<b>\u0627\u0631\u0633\u0644 \u0623\u064A \u0634\u064A \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0633\u0648\u0641 \u064A\u0631\u062F \u2714\uFE0F</b>\n\n' +
+        '\uD83D\uDCAC \u0627\u0633\u0623\u0644 \u0628\u0627\u0644\u0639\u0631\u0628\u064A \u0639\u0646:\n' +
+        '\u2022 \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0648\u0627\u0644\u0637\u0644\u0628\u0627\u062A\n' +
+        '\u2022 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0648\u0627\u0644\u0645\u062E\u0632\u0648\u0646\n' +
+        '\u2022 \u0634\u0643\u0627\u0648\u0649 \u0627\u0644\u0639\u0645\u0644\u0627\u0621\n' +
+        '\u2022 \u0623\u0648 \u0645\u062C\u0631\u062F \u062F\u0631\u062F\u0634\u0629!\n\n' +
+        '\uD83C\uDF1F <b>\u0623\u0645\u062B\u0644\u0629:</b>\n' +
+        '\" \u0643\u0645 \u0637\u0644\u0628 \u0627\u0644\u064A\u0648\u0645 \u061F \"\n' +
+        '\" \u0648\u0634\u0648 \u0623\u0643\u062B\u0631 \u0634\u064A \u0637\u0644\u0628\u0648\u0647 \u061F \"\n' +
+        '\" \u0627\u0634\u062A\u0631\u0643 \u0645\u0646 \u0627\u0644\u0645\u0632\u0627\u062C \"\n' +
+        '\" \u0643\u064A\u0641 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0627\u0644\u064A\u0648\u0645 \u061F \"\n' +
+        '\" \u0648\u0642\u0641 \u0634\u0627\u064A \"\n' +
+        '\" \u0633\u0639\u0631 \u0630\u0631\u0629 \u0643\u0628\u064A\u0631 3.5 \"\n\n' +
+        '\uD83E\uDD16 <b>\u0627\u0644\u0628\u0648\u062A \u064A\u0641\u0647\u0645 \u0648\u064A\uD83D\uDC4A \u0639\u0644\u0649 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A!</b>';
+}
+
+function serverStartMsg(port) {
+    return '\uD83D\uDD25 <b>\u0627\u0644\u0633\u064a\u0631\u0641\u0631 \u0634\u063a\u0651\u0627\u0644!</b>\n\n' + '\uD83C\uDF10 \u0627\u0644\u0645\u0646\u0641\u0630: ' + port;
 }
 
 module.exports = {
-    sendMessage, getUpdates, setChatId, getChatId,
+    sendMessage, getUpdates, clearUpdates, setChatId, getChatId, escape,
     orderMsg, complaintMsg, todayStatsMsg, reportMsg, complaintsListMsg, statsGeneralMsg,
-    ordersListMsg, pricesMsg, stockMsg, helpMsg,
-    errorMsg, priceUpdateMsg, orderDeletedMsg, stockUpdateMsg, serverStartMsg
+    ordersListMsg, pricesMsg, stockMsg, helpMsg, serverStartMsg
 };
