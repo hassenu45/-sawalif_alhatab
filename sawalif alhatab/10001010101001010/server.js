@@ -178,9 +178,16 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
     console.log('server running on http://localhost:' + PORT);
     if (process.env.TELEGRAM_BOT_TOKEN) {
-        tg.deleteWebhook().then(() => tg.clearUpdates()).catch(() => {});
-        tg.sendMessage(tg.serverStartMsg(PORT)).catch(() => {});
-        startTelegramPolling();
+        tg.deleteWebhook()
+            .then(() => tg.clearUpdates())
+            .then(() => {
+                tg.sendMessage(tg.serverStartMsg(PORT)).catch(() => {});
+                startTelegramPolling();
+            })
+            .catch(() => {
+                tg.sendMessage(tg.serverStartMsg(PORT)).catch(() => {});
+                startTelegramPolling();
+            });
     } else {
         console.log('[TG] No TELEGRAM_BOT_TOKEN - bot disabled');
     }
