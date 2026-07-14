@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const tg = require('./telegram');
 const ai = require('./ai');
+const chatbot = require('./chatbot');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
@@ -19,6 +20,10 @@ const DEFAULT_DB = {
 
 let db = loadDB();
 let writeTimer = null;
+if (process.env.TELEGRAM_CHAT_ID) {
+    db.telegramChatId = String(process.env.TELEGRAM_CHAT_ID);
+    persist();
+}
 if (db.telegramChatId) tg.setChatId(db.telegramChatId);
 
 function loadDB() {
@@ -162,12 +167,13 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
     console.log('server running on http://localhost:' + PORT);
     if (process.env.TELEGRAM_BOT_TOKEN) {
-        tg.clearUpdates().catch(() => {});
+        tg.deleteWebhook().then(() => tg.clearUpdates()).catch(() => {});
         tg.sendMessage(tg.serverStartMsg(PORT)).catch(() => {});
         startTelegramPolling();
     } else {
         console.log('[TG] No TELEGRAM_BOT_TOKEN - bot disabled');
     }
+    chatbot.start().catch(() => {});
 });
 
 function isOwner(chatId) { return String(chatId) === String(db.telegramChatId); }
@@ -180,8 +186,13 @@ async function handleTgCommand(chatId, text) {
 
     // Arabic commands:
     if (t === 'start' || t === 'ابدأ' || t === 'ربط') {
+        if (db.telegramChatId && String(chatId) !== db.telegramChatId &&
+            String(chatId) !== (process.env.TELEGRAM_CHAT_ID || '')) {
+            tg.sendMessage('\u274C \u0627\u0644\u0628\u0648\u062A \u0645\u0631\u062A\u0628\u0637 \u0628\u062D\u0633\u0627\u0628 \u0622\u062E\u0631.').catch(() => {});
+            return;
+        }
         tg.setChatId(chatId);
-        tg.sendMessage('\u2705 \u0645\u0631\u062d\u0628\u0627! \u0627\u0644\u0622\u0646 \u0623\u0631\u0633\u0644 \u0623\u064a \u0634\u064a \u0648\u0627\u0644\u0628\u0648\u062a \u0633\u0648\u0641 \u064a\u0631\u062f \u2714\ufe0f').catch(() => {});
+        tg.sendMessage('\u2705 \u0645\u0631\u062D\u0628\u0627! \u0627\u0644\u0622\u0646 \u0623\u0631\u0633\u0644 \u0623\u064A \u0634\u064A \u0648\u0627\u0644\u0628\u0648\u062A \u0633\u0648\u0641 \u064A\u0631\u062F \u2714\ufe0f').catch(() => {});
         db.telegramChatId = String(chatId);
         persist();
         return;
@@ -304,8 +315,9 @@ async function handleTgCommand(chatId, text) {
         recentComplaints: db.complaints.slice(-3).reverse()
     };
     tg.sendMessage('\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...').catch(() => {});
-    const reply = await ai.ask(text, context);
-    tg.sendMessage(reply || '\uD83D\uDCCA \u062A\u0645 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u2714\uFE0F').catch(() => {});
+    let reply = null;
+    try { reply = await ai.ask(text, context); } catch (e) {}
+    tg.sendMessage(reply || '\u274C \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A. \u062A\u0623\u0643\u062F \u0645\u0646 \u0645\u0641\u062A\u0627\u062D GROQ_API_KEY').catch(() => {});
 }
 
 let tgOffset = 0;

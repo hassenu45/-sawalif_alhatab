@@ -2,14 +2,19 @@
 const https = require('https');
 
 const API_KEY = process.env.GROQ_API_KEY || '';
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-function ask(prompt, context) {
+function ask(prompt, data) {
     if (!API_KEY) return Promise.resolve(null);
-    const system = 'You are a smart assistant for "Sawalif Alhatab" cafe (سوالف على الحطب).\n' +
-        'IMPORTANT: Always respond in Arabic (العربية). Be natural and friendly.\n\n' +
-        'Current website data:\n' + JSON.stringify(context, null, 2) + '\n\n' +
-        'Answer questions about stats, orders, prices, stock, and complaints using the data above. Do not make up information. If asked about something not in the data, say you don\'t know.';
+    let system;
+    if (data && data.system) {
+        system = data.system;
+    } else {
+        system = 'You are a smart assistant for "Sawalif Alhatab" cafe (سوالف على الحطب).\n' +
+            'IMPORTANT: Always respond in Arabic (العربية). Be natural and friendly.\n\n' +
+            'Current website data:\n' + JSON.stringify(data || {}, null, 2) + '\n\n' +
+            'Answer questions about stats, orders, prices, stock, and complaints using the data above. Do not make up information. If asked about something not in the data, say you don\'t know.';
+    }
 
     return new Promise((resolve, reject) => {
         const body = JSON.stringify({

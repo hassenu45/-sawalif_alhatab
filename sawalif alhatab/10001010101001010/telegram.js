@@ -47,6 +47,17 @@ function clearUpdates() {
     return getUpdates(-1).catch(() => {});
 }
 
+function deleteWebhook() {
+    if (!BOT_TOKEN) return Promise.resolve();
+    return new Promise(resolve => {
+        https.get({ hostname: 'api.telegram.org', path: '/bot' + BOT_TOKEN + '/deleteWebhook?drop_pending_updates=true' }, res => {
+            let body = '';
+            res.on('data', c => body += c);
+            res.on('end', () => { try { resolve(JSON.parse(body)); } catch (e) { resolve({}); } });
+        }).on('error', () => resolve({}));
+    });
+}
+
 function setChatId(id) { CHAT_ID = String(id); }
 function getChatId() { return CHAT_ID; }
 
@@ -177,7 +188,7 @@ function serverStartMsg(port) {
 }
 
 module.exports = {
-    sendMessage, getUpdates, clearUpdates, setChatId, getChatId, escape,
+    sendMessage, getUpdates, clearUpdates, deleteWebhook, setChatId, getChatId, escape,
     orderMsg, complaintMsg, todayStatsMsg, reportMsg, complaintsListMsg, statsGeneralMsg,
     ordersListMsg, pricesMsg, stockMsg, helpMsg, serverStartMsg
 };
