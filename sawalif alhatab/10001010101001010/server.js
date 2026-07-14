@@ -15,7 +15,7 @@ const DB_FILE = path.join(DATA_DIR, 'db.json');
 const DEFAULT_DB = {
     prices: { shay: 1.5, dhrah: { '\u0643\u0628\u064a\u0631': 3.0, '\u0648\u0633\u0637': 2.0 }, bushar: { '\u0643\u0628\u064a\u0631': 4.0, '\u0648\u0633\u0637': 3.0 } },
     stock: { shay: true, dhrah: { '\u0643\u0628\u064a\u0631': true, '\u0648\u0633\u0637': true }, bushar: { '\u0643\u0628\u064a\u0631': true, '\u0648\u0633\u0637': true } },
-    orders: [], complaints: [], dailyStats: {}, telegramChatId: ''
+    orders: [], complaints: [], ratings: [], dailyStats: {}, telegramChatId: ''
 };
 
 let db = loadDB();
@@ -34,6 +34,7 @@ function loadDB() {
             if (!parsed.stock) parsed.stock = DEFAULT_DB.stock;
             if (!parsed.orders) parsed.orders = [];
             if (!parsed.complaints) parsed.complaints = [];
+            if (!parsed.ratings) parsed.ratings = [];
             if (!parsed.dailyStats) parsed.dailyStats = {};
             return parsed;
         }
@@ -136,6 +137,16 @@ const server = http.createServer(async (req, res) => {
                 tg.sendMessage(tg.complaintMsg(complaint)).catch(() => {});
                 return sendJSON(res, 200, { ok: true });
             }
+            if (pathname === '/api/ratings' && req.method === 'POST') {
+                const body = await readBody(req);
+                const score = Number(body.score);
+                if (!score || score < 1 || score > 5) return sendJSON(res, 400, { error: 'rating 1-5 required' });
+                const rating = { id: uid(), date: new Date().toISOString(), name: String(body.name || 'زبون'), score, review: String(body.review || '') };
+                db.ratings.push(rating);
+                persist();
+                tg.sendMessage(tg.ratingMsg(rating)).catch(() => {});
+                return sendJSON(res, 200, { ok: true });
+            }
             if (pathname === '/api/visit' && req.method === 'POST') {
                 const today = new Date().toISOString().slice(0, 10);
                 if (!db.dailyStats[today]) db.dailyStats[today] = { visitors: 0, orders: 0, items: {} };
@@ -192,127 +203,56 @@ async function handleTgCommand(chatId, text) {
             return;
         }
         tg.setChatId(chatId);
-        tg.sendMessage('\u2705 \u0645\u0631\u062D\u0628\u0627! \u0627\u0644\u0622\u0646 \u0623\u0631\u0633\u0644 \u0623\u064A \u0634\u064A \u0648\u0627\u0644\u0628\u0648\u062A \u0633\u0648\u0641 \u064A\u0631\u062F \u2714\ufe0f').catch(() => {});
+        tg.sendMessage('\u2705 \u0645\u0631\u062D\u0628\u0627! \u0623\u0646\u0627 \u0645\u0633\u0627\u0639\u062F\u0643 \u0627\u0644\u0630\u0643\u064A. \u0627\u0633\u0623\u0644\u0646\u064A \u0639\u0646 \u0623\u064A \u0634\u064A \u0628\u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0648\u0623\u0646\u0627 \u0623\u062D\u0644\u0644 \u0644\u0643 \u0648\u0623\u0642\u062F\u0645 \u0627\u0644\u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \u2714\ufe0f').catch(() => {});
         db.telegramChatId = String(chatId);
         persist();
         return;
     }
 
     if (!isOwn) {
-        tg.sendMessage('\uD83D\uDCE8 \u062a\u0645 \u0627\u0644\u0627\u0633\u062a\u0644\u0627\u0645 \u2714\ufe0f').catch(() => {});
+        // Customer message → forward to owner as a problem/complaint
+        const complaint = { id: uid(), date: new Date().toISOString(), name: '\u0632\u0628\u0648\u0646 \u0639\u0628\u0631 \u062a\u0644\u0642\u0631\u0627\u0645', phone: String(chatId), message: text };
+        db.complaints.push(complaint);
+        persist();
+        tg.sendMessage(tg.complaintMsg(complaint)).catch(() => {});
+        tg.sendTo(chatId, '\u0634\u0643\u0631\u064b\u0627 \u062a\u0648\u0627\u0635\u0644\u0643 \u0645\u0639 \u0633\u0648\u0627\u0644\u0641 \u0639\u0644\u0649 \u0627\u0644\u062d\u0637\u0628 \uD83C\uDF32\n\u062a\u0645 \u0627\u0633\u062a\u0644\u0627\u0645 \u0631\u0633\u0627\u0644\u062a\u0643 \u0648\u0633\u064a\u062a\u0648\u0627\u0635\u0644 \u0645\u0639\u0643 \u0635\u0627\u062d\u0628 \u0627\u0644\u0645\u0642\u0647\u0649 \u0642\u0631\u064a\u0628\u064b\u0627.').catch(() => {});
         return;
     }
 
-    // ===== Owner only below =====
-    if (t === 'اليوم' || t === 'today' || smartMatch(t, ['احصائيات اليوم', 'كم طلب', 'شو صار', 'كم واحد'])) {
-        const today = new Date().toISOString().slice(0, 10);
-        tg.sendMessage(tg.todayStatsMsg(db.dailyStats[today])).catch(() => {});
-        return;
-    }
-    if (t === 'تقرير' || t === 'report' || smartMatch(t, ['تقرير اسبوع', 'اخر اسبوع', 'الاسبوع'])) {
-        tg.sendMessage(tg.reportMsg(db)).catch(() => {});
-        return;
-    }
-    if (t === 'شكاوى' || t === 'شكوى' || t === 'complaints' || smartMatch(t, ['الشكاوى', 'الرسايل', 'رسايل'])) {
-        tg.sendMessage(tg.complaintsListMsg(db.complaints)).catch(() => {});
-        return;
-    }
-    if (t === 'عام' || t === 'stats' || t === 'كل' || smartMatch(t, ['احصائيات عامة', 'كل شي', 'كل البيانات'])) {
-        const totalOrders = db.orders.length;
-        const totalComplaints = db.complaints.length;
-        const totalVisitors = Object.values(db.dailyStats).reduce((s, d) => s + (d.visitors || 0), 0);
-        const totalRevenue = db.orders.reduce((s, o) => s + (o.items || []).reduce((ss, i) => ss + (i.price || 0), 0), 0);
-        tg.sendMessage(tg.statsGeneralMsg(totalVisitors, totalOrders, totalRevenue, totalComplaints)).catch(() => {});
-        return;
-    }
-    if (t === 'طلبات' || t === 'orders' || smartMatch(t, ['الطلبات', 'اوردرات', 'اخر الطلبات'])) {
-        tg.sendMessage(tg.ordersListMsg(db.orders)).catch(() => {});
-        return;
-    }
-    if (t === 'أسعار' || t === 'اسعار' || t === 'prices' || smartMatch(t, ['الأسعار', 'الاسعار', 'كم السعر'])) {
-        tg.sendMessage(tg.pricesMsg(db.prices)).catch(() => {});
-        return;
-    }
-    if (t === 'مخزون' || t === 'stock' || smartMatch(t, ['التوفر', 'المخزون', 'موجود', 'متوفر'])) {
-        tg.sendMessage(tg.stockMsg(db.stock)).catch(() => {});
-        return;
-    }
-
-    // Smart setprice: سعر شاي 2.0 or /سعر شاي 2.0
-    if ((t.startsWith('سعر') || t.startsWith('سعر ') || t.startsWith('setprice')) && t.split(' ').length >= 3) {
-        const parts = t.replace('سعر الشاي', 'shay').replace('سعر الذرة', 'dhrah').replace('سعر البوشار', 'bushar')
-            .replace('سعر', '').trim().split(' ');
-        let item = parts[0], val;
-        if (item === 'شاي' || item === 'shay') {
-            val = parseFloat(parts[1] || parts[0]);
-            if (!isNaN(val)) { db.prices.shay = val; persist(); tg.sendMessage('\u2705 \u0634\u0627\u064a = ' + val + ' \u062f.\u0623').catch(() => {}); }
-            else tg.sendMessage('\u274c \u0633\u0639\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d').catch(() => {});
-        } else if ((item === 'dhrah' || item === 'ذرة') && parts.length >= 2) {
-            val = parseFloat(parts[1] || parts[2]);
-            const key = parts[1] === 'كبير' || parts[1] === 'وسط' ? parts[1] : '\u0643\u0628\u064a\u0631';
-            if (!isNaN(val)) { db.prices.dhrah[key] = val; persist(); tg.sendMessage('\u2705 \u0630\u0631\u0629 ' + key + ' = ' + val + ' \u062f.\u0623').catch(() => {}); }
-            else tg.sendMessage('\u274c \u0633\u0639\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d').catch(() => {});
-        } else if ((item === 'bushar' || item === 'بوشار') && parts.length >= 2) {
-            const key = parts[1] === 'كبير' || parts[1] === 'وسط' ? parts[1] : '\u0643\u0628\u064a\u0631';
-            val = parseFloat(parts[2] || parts[1]);
-            if (!isNaN(val)) { db.prices.bushar[key] = val; persist(); tg.sendMessage('\u2705 \u0628\u0648\u0634\u0627\u0631 ' + key + ' = ' + val + ' \u062f.\u0623').catch(() => {}); }
-            else tg.sendMessage('\u274c \u0633\u0639\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d').catch(() => {});
-        } else tg.sendMessage('\u274c \u062c\u0631\u0628: \u0633\u0639\u0631 \u0634\u0627\u064a 2.0').catch(() => {});
-        return;
-    }
-
-    // Smart setstock: وقف شاي or شغل ذرة كبير or /توفر شاي مقفول
-    if (smartMatch(t, ['وقف ', 'شغل ', 'قفل ', 'فتح ', 'افتح ', 'setstock'])) {
-        const parts = t.split(' ');
-        const isOn = smartMatch(t, ['شغل', 'فتح', 'افتح', 'on']);
-        const item = parts.find(p => ['شاي', 'shay', 'ذرة', 'dhrah', 'بوشار', 'bushar'].includes(p));
-        const size = parts.find(p => ['كبير', 'وسط', 'big', 'small'].includes(p));
-        let ok = false;
-        if (item === 'شاي' || item === 'shay') { db.stock.shay = isOn; ok = true; }
-        else if (item === 'ذرة' || item === 'dhrah') {
-            const k = size || '\u0643\u0628\u064a\u0631';
-            if (db.stock.dhrah[k] !== undefined) { db.stock.dhrah[k] = isOn; ok = true; }
-        }
-        else if (item === 'بوشار' || item === 'bushar') {
-            const k = size || '\u0643\u0628\u064a\u0631';
-            if (db.stock.bushar[k] !== undefined) { db.stock.bushar[k] = isOn; ok = true; }
-        }
-        if (ok) { persist(); tg.sendMessage('\u2705 \u062a\u0645 ' + (isOn ? '\u062a\u0634\u063a\u064a\u0644' : '\u0625\u064a\u0642\u0627\u0641') + ' \u0627\u0644\u0645\u0646\u062a\u062c').catch(() => {}); }
-        else tg.sendMessage('\u274c \u0645\u0627 \u0641\u0647\u0645\u062a. \u062c\u0631\u0628: \u0648\u0642\u0641 \u0634\u0627\u064a').catch(() => {});
-        return;
-    }
-
-    // حذف طلب: /حذف id or حذف الطلب id or delete id
-    if (t.startsWith('حذف') || t.startsWith('delete')) {
-        const parts = t.split(' ');
-        const id = parts[parts.length - 1];
-        const before = db.orders.length;
-        db.orders = db.orders.filter(o => o.id !== id);
-        if (db.orders.length < before) { persist(); tg.sendMessage('\u2705 \u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u0637\u0644\u0628').catch(() => {}); }
-        else tg.sendMessage('\u274c \u0627\u0644\u0637\u0644\u0628 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f').catch(() => {});
-        return;
-    }
-
-    if (t === 'مساعدة' || t === 'help' || t === 'الأوامر' || t === 'اوامر' || smartMatch(t, ['شو تكتب', 'مساعده'])) {
-        tg.sendMessage(tg.helpMsg()).catch(() => {});
-        return;
-    }
-
-    // ===== Owner sends anything else = AI response =====
+    // ===== Owner: smart AI chat about the site =====
     const today = new Date().toISOString().slice(0, 10);
-    const ts = db.dailyStats[today];
+    const ts = db.dailyStats[today] || { visitors: 0, orders: 0, items: {} };
     const totalOrders = db.orders.length;
     const totalRevenue = db.orders.reduce((s, o) => s + (o.items || []).reduce((ss, i) => ss + (i.price || 0), 0), 0);
     const totalVisitors = Object.values(db.dailyStats).reduce((s, d) => s + (d.visitors || 0), 0);
+    const totalComplaints = db.complaints.length;
+
+    const productCounts = {};
+    for (const o of db.orders) for (const it of (o.items || [])) {
+        const k = it.text || it.product || '\u0645\u0646\u062a\u062c';
+        productCounts[k] = (productCounts[k] || 0) + 1;
+    }
+
+    const ratingsAvg = db.ratings.length ? (db.ratings.reduce((s, r) => s + (r.score || 0), 0) / db.ratings.length) : 0;
+    const recentRatings = db.ratings.slice(-5).reverse();
+
     const context = {
-        todayStats: ts || { visitors: 0, orders: 0, items: {} },
-        totalVisitors,
-        totalOrders,
-        totalRevenue,
+        today: { visitors: ts.visitors || 0, orders: ts.orders || 0, topItems: ts.items || {} },
+        totals: {
+            visitors: totalVisitors,
+            orders: totalOrders,
+            revenue: totalRevenue,
+            complaints: totalComplaints,
+            ratingsCount: db.ratings.length,
+            ratingsAverage: Number(ratingsAvg.toFixed(2))
+        },
+        productOrderCounts: productCounts,
         prices: db.prices,
         stock: db.stock,
         recentOrders: db.orders.slice(-3).reverse(),
-        recentComplaints: db.complaints.slice(-3).reverse()
+        recentComplaints: db.complaints.slice(-3).reverse(),
+        recentRatings: recentRatings,
+        recentRatingsText: recentRatings.map(r => '(' + r.score + '/5) ' + (r.review || r.name))
     };
     tg.sendMessage('\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...').catch(() => {});
     let reply = null;

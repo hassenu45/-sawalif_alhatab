@@ -61,6 +61,26 @@ function deleteWebhook() {
 function setChatId(id) { CHAT_ID = String(id); }
 function getChatId() { return CHAT_ID; }
 
+function sendTo(chatId, text) {
+    if (!BOT_TOKEN) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const payload = JSON.stringify({ chat_id: String(chatId), text: String(text), parse_mode: 'HTML' });
+        const req = https.request({
+            hostname: 'api.telegram.org',
+            path: '/bot' + BOT_TOKEN + '/sendMessage',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+        }, res => {
+            let body = '';
+            res.on('data', c => body += c);
+            res.on('end', () => { try { const j = JSON.parse(body); if (!j.ok) console.error('[TG] send error:', j.description); resolve(j); } catch (e) { resolve({}); } });
+        });
+        req.on('error', reject);
+        req.write(payload);
+        req.end();
+    });
+}
+
 function escape(text) {
     return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -85,6 +105,14 @@ function complaintMsg(c) {
         '\uD83D\uDC64 <b>\u0627\u0644\u0627\u0633\u0645:</b> ' + (c.name || '') + '\n' +
         '\uD83D\uDCDE <b>\u0627\u0644\u0647\u0627\u062a\u0641:</b> ' + (c.phone || '\u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631') + '\n' +
         '\uD83D\uDCAC <b>\u0627\u0644\u0631\u0633\u0627\u0644\u0629:</b>\n' + (c.message || '');
+}
+
+function ratingMsg(r) {
+    const stars = '\u2B50'.repeat(Math.min(5, Math.max(1, r.score))) + '\u2606'.repeat(Math.max(0, 5 - r.score));
+    return '\uD83D\uDCCA <b>\u062a\u0642\u064a\u064a\u0645 \u062c\u062f\u064a\u062f \u0645\u0646 \u0639\u0645\u064a\u0644!</b>\n\n' +
+        '\uD83D\uDC64 <b>\u0627\u0644\u0627\u0633\u0645:</b> ' + (r.name || '') + '\n' +
+        '\u2B50 <b>\u0627\u0644\u062a\u0642\u064a\u064a\u0645:</b> ' + stars + ' (' + r.score + '/5)\n' +
+        (r.review ? '\uD83D\uDCAC <b>\u0631\u0623\u064a\u0647:</b>\n' + r.review : '');
 }
 
 function todayStatsMsg(s) {
@@ -166,21 +194,16 @@ function stockMsg(s) {
 }
 
 function helpMsg() {
-    return '\uD83E\uDD16 <b>\u0623\u0648\u0627\u0645\u0631 \u0627\u0644\u0628\u0648\u062a</b>\n\n' +
-        '<b>\u0627\u0631\u0633\u0644 \u0623\u064A \u0634\u064A \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0633\u0648\u0641 \u064A\u0631\u062F \u2714\uFE0F</b>\n\n' +
-        '\uD83D\uDCAC \u0627\u0633\u0623\u0644 \u0628\u0627\u0644\u0639\u0631\u0628\u064A \u0639\u0646:\n' +
-        '\u2022 \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0648\u0627\u0644\u0637\u0644\u0628\u0627\u062A\n' +
-        '\u2022 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0648\u0627\u0644\u0645\u062E\u0632\u0648\u0646\n' +
-        '\u2022 \u0634\u0643\u0627\u0648\u0649 \u0627\u0644\u0639\u0645\u0644\u0627\u0621\n' +
-        '\u2022 \u0623\u0648 \u0645\u062C\u0631\u062F \u062F\u0631\u062F\u0634\u0629!\n\n' +
-        '\uD83C\uDF1F <b>\u0623\u0645\u062B\u0644\u0629:</b>\n' +
-        '\" \u0643\u0645 \u0637\u0644\u0628 \u0627\u0644\u064A\u0648\u0645 \u061F \"\n' +
-        '\" \u0648\u0634\u0648 \u0623\u0643\u062B\u0631 \u0634\u064A \u0637\u0644\u0628\u0648\u0647 \u061F \"\n' +
-        '\" \u0627\u0634\u062A\u0631\u0643 \u0645\u0646 \u0627\u0644\u0645\u0632\u0627\u062C \"\n' +
-        '\" \u0643\u064A\u0641 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0627\u0644\u064A\u0648\u0645 \u061F \"\n' +
-        '\" \u0648\u0642\u0641 \u0634\u0627\u064A \"\n' +
-        '\" \u0633\u0639\u0631 \u0630\u0631\u0629 \u0643\u0628\u064A\u0631 3.5 \"\n\n' +
-        '\uD83E\uDD16 <b>\u0627\u0644\u0628\u0648\u062A \u064A\u0641\u0647\u0645 \u0648\u064A\uD83D\uDC4A \u0639\u0644\u0649 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A!</b>';
+    return '\uD83E\uDD16 <b>\u0645\u0633\u0627\u0639\u062F\u0643 \u0627\u0644\u0630\u0643\u064A</b>\n\n' +
+        '\u0623\u0646\u0627 \u0623\u062D\u0644\u0644 \u0644\u0643 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0623\u0633\u0627\u0639\u062F\u0643 \u0628\u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0648\u0627\u0644\u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A.\n\n' +
+        '\u0627\u0633\u0623\u0644\u0646\u064A \u0628\u0627\u0644\u0639\u0631\u0628\u064A\u060C \u0645\u062B\u0644\u064B\u0627\u064B:\n' +
+        '\u2022 \u0643\u0645 \u0632\u0627\u0626\u0631 \u0632\u0631\u0646\u0627 \u0627\u0644\u064A\u0648\u0645\u061F\n' +
+        '\u2022 \u0643\u0645 \u0637\u0644\u0628 \u0648\u0635\u0644 \u0647\u0627\u0644\u0623\u0633\u0628\u0648\u0639\u061F\n' +
+        '\u2022 \u0634\u0648 \u0623\u0643\u062B\u0631 \u0645\u0646\u062A\u062C \u0627\u0644\u0646\u0627\u0633 \u062A\u0637\u0644\u0628\u0647\u061F\n' +
+        '\u2022 \u0643\u0645 \u0634\u0643\u0648\u0649 \u0648\u062C\u0646\u0627 \u0648\u0645\u0627 \u062A\u0642\u064A\u064A\u0645\u0627\u062A \u0627\u0644\u0639\u0645\u0644\u0627\u0621\u061F\n' +
+        '\u2022 \u0648\u0634 \u0627\u0642\u062A\u0631\u0627\u062D\u0643 \u0644\u062A\u0637\u0648\u064A\u0631 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A\u061F\n' +
+        '\u2022 \u062D\u0644\u0644 \u0644\u064A \u0648\u0636\u0639 \u0627\u0644\u0633\u0648\u0642 \u0628\u0634\u0643\u0644 \u062F\u0628\u0644\u0648\u0645\u0627\u0633\u064A\n\n' +
+        '\u0648\u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u062A\u0635\u0644\u0646\u064A \u0645\u0646 \u0632\u0628\u0648\u0646 \u0628\u062A\u0648\u0635\u0644\u0643 \u0643\u0634\u0643\u0648\u0649 \u0641\u0648\u0631\u064B\u0627\u064B \uD83D\uDC47';
 }
 
 function serverStartMsg(port) {
@@ -188,7 +211,7 @@ function serverStartMsg(port) {
 }
 
 module.exports = {
-    sendMessage, getUpdates, clearUpdates, deleteWebhook, setChatId, getChatId, escape,
-    orderMsg, complaintMsg, todayStatsMsg, reportMsg, complaintsListMsg, statsGeneralMsg,
+    sendMessage, sendTo, getUpdates, clearUpdates, deleteWebhook, setChatId, getChatId, escape,
+    orderMsg, complaintMsg, ratingMsg, todayStatsMsg, reportMsg, complaintsListMsg, statsGeneralMsg,
     ordersListMsg, pricesMsg, stockMsg, helpMsg, serverStartMsg
 };
