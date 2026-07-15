@@ -221,6 +221,7 @@ server.listen(PORT, () => {
 function smartMatch(text, keywords) { return keywords.some(k => text.includes(k)); }
 
 async function handleTgCommand(chatId, text) {
+    console.log('[TG] Message from', chatId, ':', text.substring(0, 100));
     const t = text.replace(/[\/#!]/g, '').trim();
 
     // ===== Commands =====
@@ -295,11 +296,11 @@ async function handleTgCommand(chatId, text) {
         prompt = 'حلل لي وضع المقهى بشكل دبلوماسي وتحليلي بناءً على البيانات أدناه، واذكر نقاط القوة والضعف:\n\n' + text;
     }
 
-    tg.sendTo(chatId, '\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...').catch(() => {});
+    tg.sendTo(chatId, '\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...').catch(e => console.error('[TG] sendTo error:', e.message));
     let reply = null;
-    try { reply = await ai.ask(prompt, context); } catch (e) {}
-    if (!reply) reply = '❌ لم أتمكن من الرد. تأكد أن Ollama شغّال على ' + (process.env.OLLAMA_URL || 'http://localhost:11434') + ' أو أن مفتاح GROQ_API_KEY معيّن.';
-    tg.sendTo(chatId, reply).catch(() => {});
+    try { reply = await ai.ask(prompt, context); } catch (e) { console.error('[TG] AI error:', e.message); }
+    if (!reply) reply = '❌ لم أتمكن من الرد. تأكد من إعدادات AI على السيرفر.';
+    tg.sendTo(chatId, reply).catch(e => console.error('[TG] sendTo reply error:', e.message));
 }
 
 let tgOffset = 0;
