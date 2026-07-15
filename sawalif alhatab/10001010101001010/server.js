@@ -13,8 +13,8 @@ const DATA_DIR = path.join(ROOT, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
 const DEFAULT_DB = {
-    prices: { shay: 1.5, dhrah: { '\u0643\u0628\u064a\u0631': 3.0, '\u0648\u0633\u0637': 2.0 }, bushar: { '\u0643\u0628\u064a\u0631': 4.0, '\u0648\u0633\u0637': 3.0 } },
-    stock: { shay: true, dhrah: { '\u0643\u0628\u064a\u0631': true, '\u0648\u0633\u0637': true }, bushar: { '\u0643\u0628\u064a\u0631': true, '\u0648\u0633\u0637': true } },
+    prices: { shay: 1.5, dhrah: { كبير: 3.0, وسط: 2.0 }, bushar: { كبير: 4.0, وسط: 3.0 } },
+    stock: { shay: true, dhrah: { كبير: true, وسط: true }, bushar: { كبير: true, وسط: true } },
     orders: [], complaints: [], ratings: [], dailyStats: {}, telegramChatId: ''
 };
 
@@ -93,6 +93,7 @@ function serveStatic(req, res, filePath) {
     });
 }
 
+// ===================== HTTP Server =====================
 const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const pathname = url.pathname;
@@ -105,7 +106,7 @@ const server = http.createServer(async (req, res) => {
                 if (body.prices) db.prices = body.prices;
                 if (body.stock) db.stock = body.stock;
                 persist();
-                tg.sendTo(chatId, tg.priceUpdateMsg('admin', db.prices)).catch(() => {});
+                tg.sendMessage('✅ تم تحديث الأسعار/المخزون').catch(() => {});
                 return sendJSON(res, 200, { prices: db.prices, stock: db.stock });
             }
             if (pathname === '/api/orders' && req.method === 'POST') {
@@ -114,7 +115,7 @@ const server = http.createServer(async (req, res) => {
                 for (const it of body.items) {
                     let available = true;
                     if (it.product === 'shay') available = db.stock.shay;
-                    else if (it.product === 'dhrah' || it.product === 'bushar') available = db.stock[it.product][it.size || '\u0643\u0628\u064a\u0631'];
+                    else if (it.product === 'dhrah' || it.product === 'bushar') available = db.stock[it.product][it.size || 'كبير'];
                     if (!available) return sendJSON(res, 400, { error: 'out of stock: ' + (it.text || it.product) });
                 }
                 const order = { id: uid(), date: new Date().toISOString(), name: String(body.name), phone: String(body.phone), address: String(body.address || ''), location: String(body.location || ''), items: body.items };
@@ -124,7 +125,7 @@ const server = http.createServer(async (req, res) => {
                 db.dailyStats[today].orders++;
                 for (const it of order.items) { const k = it.text || 'other'; db.dailyStats[today].items[k] = (db.dailyStats[today].items[k] || 0) + 1; }
                 persist();
-                tg.sendTo(chatId, tg.orderMsg(order)).catch(() => {});
+                tg.sendMessage(tg.orderMsg(order)).catch(() => {});
                 return sendJSON(res, 200, { ok: true, id: order.id });
             }
             if (pathname === '/api/orders' && req.method === 'GET') return sendJSON(res, 200, { orders: db.orders });
@@ -134,7 +135,7 @@ const server = http.createServer(async (req, res) => {
                 const complaint = { id: uid(), date: new Date().toISOString(), name: String(body.name), phone: String(body.phone || ''), message: String(body.message) };
                 db.complaints.push(complaint);
                 persist();
-                tg.sendTo(chatId, tg.complaintMsg(complaint)).catch(() => {});
+                tg.sendMessage(tg.complaintMsg(complaint)).catch(() => {});
                 return sendJSON(res, 200, { ok: true });
             }
             if (pathname === '/api/ratings' && req.method === 'POST') {
@@ -144,7 +145,7 @@ const server = http.createServer(async (req, res) => {
                 const rating = { id: uid(), date: new Date().toISOString(), name: String(body.name || 'زبون'), score, review: String(body.review || '') };
                 db.ratings.push(rating);
                 persist();
-                tg.sendTo(chatId, tg.ratingMsg(rating)).catch(() => {});
+                tg.sendMessage(tg.ratingMsg(rating)).catch(() => {});
                 return sendJSON(res, 200, { ok: true });
             }
             if (pathname === '/api/visit' && req.method === 'POST') {
@@ -159,7 +160,7 @@ const server = http.createServer(async (req, res) => {
                 const id = delMatch[1];
                 db.orders = db.orders.filter(o => o.id !== id);
                 persist();
-                tg.sendTo(chatId, tg.orderDeletedMsg(id)).catch(() => {});
+                tg.sendMessage('🗑 تم حذف الطلب: ' + id).catch(() => {});
                 return sendJSON(res, 200, { ok: true });
             }
             if (pathname === '/api/android-update' && req.method === 'GET') {
@@ -216,96 +217,140 @@ server.listen(PORT, () => {
     } else {
         console.log('[TG] No TELEGRAM_BOT_TOKEN - bot disabled');
     }
+    chatbot.start().catch(() => {});
 });
 
-function smartMatch(text, keywords) { return keywords.some(k => text.includes(k)); }
+// ===================== Telegram Bot =====================
+function smartMatch(text, keywords) {
+    return keywords.some(k => text.includes(k));
+}
 
-async function handleTgCommand(chatId, text) {
-    console.log('[TG] Message from', chatId, ':', text.substring(0, 100));
-    const t = text.replace(/[\/#!]/g, '').trim();
-
-    // ===== Commands =====
-    if (t === 'start' || t === 'ابدأ' || t === 'ربط') {
-        tg.sendTo(chatId, '\u2705 \u0645\u0631\u062D\u0628\u0627! \u0623\u0646\u0627 \u0645\u0633\u0627\u0639\u062F\u0643 \u0627\u0644\u0630\u0643\u064A \u0645\u062F\u0639\u0648\u0645 \u0628\u0640 Ollama.\n\u0627\u0633\u0623\u0644\u0646\u064A \u0639\u0646 \u0623\u064A \u0634\u064A \u0628\u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0648\u0623\u0646\u0627 \u0623\u062D\u0644\u0644 \u0644\u0643 \u0648\u0623\u0642\u062F\u0645 \u0627\u0644\u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \u2714\ufe0f').catch(() => {});
-        return;
-    }
-
-    // ===== Send latest Android APK =====
-    if (smartMatch(t, ['تطبيق', 'apk', 'تحديث التطبيق', 'برنامج']) || /تطبيق\s*\d+/.test(text)) {
-        return sendAndroidUpdate(chatId, text);
-    }
-
-    // ===== Build site context =====
+function buildContext() {
     const today = new Date().toISOString().slice(0, 10);
     const ts = db.dailyStats[today] || { visitors: 0, orders: 0, items: {} };
-    const totalOrders = db.orders.length;
-    const totalRevenue = db.orders.reduce((s, o) => s + (o.items || []).reduce((ss, i) => ss + (i.price || 0), 0), 0);
     const totalVisitors = Object.values(db.dailyStats).reduce((s, d) => s + (d.visitors || 0), 0);
-    const totalComplaints = db.complaints.length;
-
     const productCounts = {};
     for (const o of db.orders) for (const it of (o.items || [])) {
-        const k = it.text || it.product || '\u0645\u0646\u062a\u062c';
+        const k = it.text || it.product || 'منتج';
         productCounts[k] = (productCounts[k] || 0) + 1;
     }
-
-    const ratingsAvg = db.ratings.length ? (db.ratings.reduce((s, r) => s + (r.score || 0), 0) / db.ratings.length) : 0;
-    const recentRatings = db.ratings.slice(-5).reverse();
-
-    const context = {
+    const avg = db.ratings.length ? (db.ratings.reduce((s, r) => s + r.score, 0) / db.ratings.length).toFixed(1) : 0;
+    return {
         today: { visitors: ts.visitors || 0, orders: ts.orders || 0, topItems: ts.items || {} },
         totals: {
             visitors: totalVisitors,
-            orders: totalOrders,
-            revenue: totalRevenue,
-            complaints: totalComplaints,
-            ratingsCount: db.ratings.length,
-            ratingsAverage: Number(ratingsAvg.toFixed(2))
+            orders: db.orders.length,
+            complaints: db.complaints.length,
+            ratings: db.ratings.length,
+            ratingsAvg: avg
         },
         productOrderCounts: productCounts,
         prices: db.prices,
-        stock: db.stock,
-        recentOrders: db.orders.slice(-3).reverse(),
-        recentComplaints: db.complaints.slice(-3).reverse(),
-        recentRatings: recentRatings,
-        recentRatingsText: recentRatings.map(r => '(' + r.score + '/5) ' + (r.review || r.name))
+        stock: db.stock
     };
-
-    if (t === 'help' || t === 'مساعدة' || t === 'أوامر' || t === 'اوامر') {
-        tg.sendTo(chatId, tg.helpMsg()).catch(() => {});
-        return;
-    }
-    if (t === 'stats' || t === 'إحصائيات' || t === 'تقرير' || t === 'احصائيات') {
-        tg.sendTo(chatId, tg.statsGeneralMsg(totalVisitors, totalOrders, totalRevenue, totalComplaints) + '\n\n' + tg.reportMsg(db)).catch(() => {});
-        return;
-    }
-    if (t === 'stock' || t === 'توفر' || t === 'المخزون' || t === 'مخزون') {
-        tg.sendTo(chatId, tg.stockMsg(db.stock)).catch(() => {});
-        return;
-    }
-    if (t === 'prices' || t === 'الأسعار' || t === 'الاسعار' || t === 'السعر') {
-        tg.sendTo(chatId, tg.pricesMsg(db.prices)).catch(() => {});
-        return;
-    }
-
-    // ===== Consulting modes (plan / analyze / general) =====
-    let prompt = text;
-    if (smartMatch(t, ['خطه', 'خطط', 'خطة', 'اقتراح', 'اقتراحات', 'خططه', 'plan', 'تطوير'])) {
-        prompt = 'بصفتي صاحب المقهى، أريد منك خطة عمل واقتراحات عملية ومحددة لتطوير المبيعات وتحسين الأداء بناءً على البيانات أدناه. رتّبها كخطوات:\n\n' + text;
-    } else if (smartMatch(t, ['تحليل', 'analyze', 'حلل', 'وضع'])) {
-        prompt = 'حلل لي وضع المقهى بشكل دبلوماسي وتحليلي بناءً على البيانات أدناه، واذكر نقاط القوة والضعف:\n\n' + text;
-    }
-
-    tg.sendTo(chatId, '\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...').catch(e => console.error('[TG] sendTo error:', e.message));
-    let reply = null;
-    try { reply = await ai.ask(prompt, context); } catch (e) { console.error('[TG] AI error:', e.message); }
-    if (!reply) reply = '❌ لم أتمكن من الرد. تأكد من إعدادات AI على السيرفر.';
-    tg.sendTo(chatId, reply).catch(e => console.error('[TG] sendTo reply error:', e.message));
 }
 
-let tgOffset = 0;
-let tgRunning = false;
+function menuText() {
+    const p = db.prices;
+    return '☕ شاي على الحطب: ' + p.shay + ' د.أ\n' +
+        '🌽 ذرة كبير: ' + p.dhrah.كبير + ' | وسط: ' + p.dhrah.وسط + ' د.أ\n' +
+        '🍿 بوشار كبير: ' + p.bushar.كبير + ' | وسط: ' + p.bushar.وسط + ' د.أ';
+}
 
+function stockText() {
+    const ok = s => s ? '✅ متوفر' : '❌ غير متوفر';
+    const s = db.stock;
+    return '☕ شاي: ' + ok(s.shay) + '\n' +
+        '🌽 ذرة كبير: ' + ok(s.dhrah.كبير) + ' | وسط: ' + ok(s.dhrah.وسط) + '\n' +
+        '🍿 بوشار كبير: ' + ok(s.bushar.كبير) + ' | وسط: ' + ok(s.bushar.وسط);
+}
+
+function statsText() {
+    const ctx = buildContext();
+    return '📊 إحصائيات:\n' +
+        '👀 زوار: ' + ctx.totals.visitors + '\n' +
+        '🛵 طلبات: ' + ctx.totals.orders + '\n' +
+        '💬 شكاوي: ' + ctx.totals.complaints + '\n' +
+        '⭐ تقييمات: ' + ctx.totals.ratings + ' (معدل: ' + ctx.totals.ratingsAvg + '/5)\n' +
+        '📅 اليوم: زوار ' + ctx.today.visitors + ' | طلبات ' + ctx.today.orders;
+}
+
+async function handleTgCommand(chatId, text) {
+    console.log('[Bot] From', chatId, ':', text.substring(0, 100));
+    const t = text.replace(/[\/#!]/g, '').trim();
+    const send = (msg) => tg.sendTo(chatId, msg).catch(e => console.error('[Bot] send err:', e.message));
+
+    try {
+        if (t === 'start' || t === 'ابدأ' || t === 'ربط') {
+            return send('✅ مرحبا! أنا مساعدك الذكي.\n\nالأوامر:\n/menu - القائمة والأسعار\n/stock - التوفر\n/stats - الإحصائيات\n/setprice منتج سعر - تعديل سعر\n/setstock منتج on/off - تعديل التوفر\nأرسل "تطبيق" لتحميل APK\nأو أي سؤال للذكاء الاصطناعي');
+        }
+
+        if (t === 'menu' || t === 'القائمة' || t === 'المنيو' || t === 'الأسعار') {
+            return send('📋 القائمة:\n' + menuText());
+        }
+
+        if (t === 'stock' || t === 'توفر' || t === 'المخزون') {
+            return send('📦 المخزون:\n' + stockText());
+        }
+
+        if (t === 'stats' || t === 'إحصائيات' || t === 'تقرير' || t === 'احصائيات') {
+            return send(statsText());
+        }
+
+        if (t.startsWith('setprice') || t.startsWith('سعر')) {
+            const parts = t.split(/\s+/);
+            if (parts.length < 3) return send('مثال: setprice shay 2.0');
+            const name = parts[1];
+            const val = parseFloat(parts[2]);
+            if (isNaN(val) || val <= 0) return send('السعر غير صالح');
+            if (name === 'shay' || name === 'شاي') { db.prices.shay = val; }
+            else if (name === 'dhrah_k' || name === 'ذرة ك' || name === 'ذرة كبير') { db.prices.dhrah.كبير = val; }
+            else if (name === 'dhrah_m' || name === 'ذرة و' || name === 'ذرة وسط') { db.prices.dhrah.وسط = val; }
+            else if (name === 'bushar_k' || name === 'بوشار ك' || name === 'بوشار كبير') { db.prices.bushar.كبير = val; }
+            else if (name === 'bushar_m' || name === 'بوشار و' || name === 'بوشار وسط') { db.prices.bushar.وسط = val; }
+            else return send('منتج غير معروف: ' + name + '\nالمنتجات: shay, dhrah_k, dhrah_m, bushar_k, bushar_m');
+            persist();
+            return send('✅ تم تحديث السعر\n' + menuText());
+        }
+
+        if (t.startsWith('setstock') || t.startsWith('توفر')) {
+            const parts = t.split(/\s+/);
+            if (parts.length < 3) return send('مثال: setstock shay off');
+            const name = parts[1];
+            const val = parts[2] === 'on' || parts[2] === 'true' || parts[2] === 'متوفر';
+            if (name === 'shay' || name === 'شاي') { db.stock.shay = val; }
+            else if (name === 'dhrah_k' || name === 'ذرة ك') { db.stock.dhrah.كبير = val; }
+            else if (name === 'dhrah_m' || name === 'ذرة و') { db.stock.dhrah.وسط = val; }
+            else if (name === 'bushar_k' || name === 'بوشار ك') { db.stock.bushar.كبير = val; }
+            else if (name === 'bushar_m' || name === 'بوشار و') { db.stock.bushar.وسط = val; }
+            else return send('منتج غير معروف');
+            persist();
+            return send('✅ تم تحديث التوفر\n' + stockText());
+        }
+
+        if (smartMatch(t, ['تطبيق', 'apk', 'تحديث']) || /تطبيق\s*\d+/.test(text)) {
+            const apk = findLatestApk();
+            if (!apk) return send('❌ ما لقيت ملف APK');
+            const m = text.match(/(\d+)/);
+            const ver = m ? m[1] : '';
+            const caption = '📱 تحديث أندرويد' + (ver ? ' (بناء ' + ver + ')' : '') + '\n📦 ' + path.basename(apk);
+            send('📤 جار الإرسال...');
+            return tg.sendDocument(chatId, apk, caption).catch(() => send('❌ فشل الإرسال'));
+        }
+
+        // === AI reply ===
+        send('⏳ جار التفكير...');
+        console.log('[Bot] Calling Groq...');
+        const reply = await ai.ask(text, buildContext());
+        console.log('[Bot] Reply:', reply ? reply.substring(0, 80) : 'null');
+        send(reply || '❌ لم أتمكن من الرد حالياً');
+    } catch (e) {
+        console.error('[Bot] CRASH:', e.message, e.stack);
+        send('🚨 خطأ: ' + e.message);
+    }
+}
+
+// ===================== APK helpers =====================
 function findLatestApk() {
     const apkDir = path.join(ROOT, 'android');
     let apk = null, latest = 0;
@@ -334,20 +379,10 @@ function getAndroidVersion() {
     } catch (e) { return { versionCode: 0, versionName: '' }; }
 }
 
-function sendAndroidUpdate(chatId, text) {
-    const apk = findLatestApk();
-    if (!apk) {
-        tg.sendTo(chatId, '\u274C \u0645\u0627 \u0644\u0642\u064A\u062A \u0645\u0644\u0641 APK \u062F\u0627\u062E\u0644 \u0645\u062C\u0644\u062F android. \u062D\u0637 \u0627\u0644\u0645\u0644\u0641 \u0641\u064A \u0645\u0643\u0627\u0646 \u0645\u062B\u0644 android/app/release/app-release.apk').catch(() => {});
-        return Promise.resolve();
-    }
-    const m = text.match(/(\d+)/);
-    const ver = m ? m[1] : '';
-    const caption = '\uD83C\uDCF1 \u062A\u062D\u062F\u064A\u062B \u062A\u0637\u0628\u064A\u0642 \u0623\u0646\u062F\u0631\u0648\u064A\u062F' + (ver ? ' (\u0628\u0646\u0627\u0621 ' + ver + ')' : '') + '\n\uD83D\uDCE6 ' + path.basename(apk);
-    tg.sendTo(chatId, '\uD83D\uDCE4 \u062C\u0627\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u0644\u0641...').catch(() => {});
-    return tg.sendDocument(chatId, apk, caption).catch(() => {
-        tg.sendTo(chatId, '\u274C \u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u0644\u0641. \u062D\u062F \u062A\u0644\u0642\u0631\u0627\u0645 \u0644\u0644\u0645\u0644\u0641\u0627\u062A 50MB \u0648\u0627\u0644\u0645\u0633\u0627\u0631: ' + apk).catch(() => {});
-    });
-}
+// ===================== Polling =====================
+let tgOffset = 0;
+let tgRunning = false;
+
 async function startTelegramPolling() {
     if (tgRunning) return;
     tgRunning = true;
@@ -359,7 +394,6 @@ async function startTelegramPolling() {
             if (!msg || !msg.text) continue;
             handleTgCommand(msg.chat.id, msg.text.trim()).catch(() => {});
         }
-    } catch (e) { console.error('[TG] polling error:', e.message); }
+    } catch (e) { console.error('[Bot] Polling error:', e.message); }
     setTimeout(startTelegramPolling, 3000);
 }
-
