@@ -162,6 +162,31 @@ const server = http.createServer(async (req, res) => {
                 tg.sendMessage(tg.orderDeletedMsg(id)).catch(() => {});
                 return sendJSON(res, 200, { ok: true });
             }
+            if (pathname === '/api/android-update' && req.method === 'GET') {
+                const apk = findLatestApk();
+                if (!apk) return sendJSON(res, 404, { error: 'no apk' });
+                const ver = getAndroidVersion();
+                const stat = fs.statSync(apk);
+                const base = process.env.WEBSITE_DOMAIN ? 'https://' + process.env.WEBSITE_DOMAIN : '';
+                return sendJSON(res, 200, {
+                    versionCode: ver.versionCode,
+                    versionName: ver.versionName,
+                    downloadUrl: base + '/api/android-apk',
+                    size: stat.size,
+                    updatedAt: new Date(stat.mtimeMs).toISOString()
+                });
+            }
+            if (pathname === '/api/android-apk' && req.method === 'GET') {
+                const apk = findLatestApk();
+                if (!apk) { res.writeHead(404); return res.end('not found'); }
+                res.writeHead(200, {
+                    'Content-Type': 'application/vnd.android.package-archive',
+                    'Content-Disposition': 'attachment; filename="app-release.apk"',
+                    'Content-Length': fs.statSync(apk).size
+                });
+                fs.createReadStream(apk).pipe(res);
+                return;
+            }
             return sendJSON(res, 404, { error: 'not found' });
         }
         if (req.method === 'GET' || req.method === 'HEAD') {
@@ -226,6 +251,11 @@ async function handleTgCommand(chatId, text) {
         return;
     }
 
+    // ===== Owner: send latest Android APK =====
+    if (smartMatch(t, ['تطبيق', 'apk', 'تحديث التطبيق', 'برنامج']) || /تطبيق\s*\d+/.test(text)) {
+        return sendAndroidUpdate(chatId, text);
+    }
+
     // ===== Owner: smart AI chat about the site =====
     const today = new Date().toISOString().slice(0, 10);
     const ts = db.dailyStats[today] || { visitors: 0, orders: 0, items: {} };
@@ -261,14 +291,84 @@ async function handleTgCommand(chatId, text) {
         recentRatings: recentRatings,
         recentRatingsText: recentRatings.map(r => '(' + r.score + '/5) ' + (r.review || r.name))
     };
+    // ===== Owner commands =====
+    if (t === 'help' || t === 'مساعدة' || t === 'أوامر' || t === 'اوامر') {
+        tg.sendMessage(tg.helpMsg()).catch(() => {});
+        return;
+    }
+    if (t === 'stats' || t === 'إحصائيات' || t === 'تقرير' || t === 'احصائيات') {
+        tg.sendMessage(tg.statsGeneralMsg(totalVisitors, totalOrders, totalRevenue, totalComplaints) + '\n\n' + tg.reportMsg(db)).catch(() => {});
+        return;
+    }
+    if (t === 'stock' || t === 'توفر' || t === 'المخزون' || t === 'مخزون') {
+        tg.sendMessage(tg.stockMsg(db.stock)).catch(() => {});
+        return;
+    }
+    if (t === 'prices' || t === 'الأسعار' || t === 'الاسعار' || t === 'السعر') {
+        tg.sendMessage(tg.pricesMsg(db.prices)).catch(() => {});
+        return;
+    }
+
+    // ===== Consulting modes (plan / analyze / general) =====
+    let prompt = text;
+    if (smartMatch(t, ['خطه', 'خطط', 'خطة', 'اقتراح', 'اقتراحات', 'خططه', 'plan', 'تطوير'])) {
+        prompt = 'بصفتي صاحب المقهى، أريد منك خطة عمل واقتراحات عملية ومحددة لتطوير المبيعات وتحسين الأداء بناءً على البيانات أدناه. رتّبها كخطوات:\n\n' + text;
+    } else if (smartMatch(t, ['تحليل', 'analyze', 'حلل', 'وضع'])) {
+        prompt = 'حلل لي وضع المقهى بشكل دبلوماسي وتحليلي بناءً على البيانات أدناه، واذكر نقاط القوة والضعف:\n\n' + text;
+    }
+
     tg.sendMessage('\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...').catch(() => {});
     let reply = null;
-    try { reply = await ai.ask(text, context); } catch (e) {}
-    tg.sendMessage(reply || '\u274C \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A. \u062A\u0623\u0643\u062F \u0645\u0646 \u0645\u0641\u062A\u0627\u062D GROQ_API_KEY').catch(() => {});
+    try { reply = await ai.ask(prompt, context); } catch (e) {}
+    if (!reply) reply = '❌ لم أتمكن من الرد. تأكد أن Ollama شغّال على ' + (process.env.OLLAMA_URL || 'http://localhost:11434') + ' أو أن مفتاح GROQ_API_KEY معيّن.';
+    tg.sendMessage(reply).catch(() => {});
 }
 
 let tgOffset = 0;
 let tgRunning = false;
+
+function findLatestApk() {
+    const apkDir = path.join(ROOT, 'android');
+    let apk = null, latest = 0;
+    const skip = new Set(['node_modules', '.gradle', '.idea', 'build', '.git']);
+    const walk = (dir) => {
+        let entries;
+        try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+        for (const e of entries) {
+            const fp = path.join(dir, e.name);
+            if (e.isDirectory()) { if (skip.has(e.name)) continue; walk(fp); }
+            else if (e.name.toLowerCase().endsWith('.apk')) {
+                try { const m = fs.statSync(fp).mtimeMs; if (m > latest) { latest = m; apk = fp; } } catch (e) {}
+            }
+        }
+    };
+    if (fs.existsSync(apkDir)) walk(apkDir);
+    return apk;
+}
+
+function getAndroidVersion() {
+    try {
+        const gradle = fs.readFileSync(path.join(ROOT, 'android', 'app', 'build.gradle'), 'utf8');
+        const vc = (gradle.match(/versionCode\s+(\d+)/) || [])[1] || '0';
+        const vn = (gradle.match(/versionName\s+"([^"]+)"/) || [])[1] || '';
+        return { versionCode: parseInt(vc, 10) || 0, versionName: vn };
+    } catch (e) { return { versionCode: 0, versionName: '' }; }
+}
+
+function sendAndroidUpdate(chatId, text) {
+    const apk = findLatestApk();
+    if (!apk) {
+        tg.sendMessage('\u274C \u0645\u0627 \u0644\u0642\u064A\u062A \u0645\u0644\u0641 APK \u062F\u0627\u062E\u0644 \u0645\u062C\u0644\u062F android. \u062D\u0637 \u0627\u0644\u0645\u0644\u0641 \u0641\u064A \u0645\u0643\u0627\u0646 \u0645\u062B\u0644 android/app/release/app-release.apk').catch(() => {});
+        return Promise.resolve();
+    }
+    const m = text.match(/(\d+)/);
+    const ver = m ? m[1] : '';
+    const caption = '\uD83C\uDCF1 \u062A\u062D\u062F\u064A\u062B \u062A\u0637\u0628\u064A\u0642 \u0623\u0646\u062F\u0631\u0648\u064A\u062F' + (ver ? ' (\u0628\u0646\u0627\u0621 ' + ver + ')' : '') + '\n\uD83D\uDCE6 ' + path.basename(apk);
+    tg.sendMessage('\uD83D\uDCE4 \u062C\u0627\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u0644\u0641...').catch(() => {});
+    return tg.sendDocument(chatId, apk, caption).catch(() => {
+        tg.sendMessage('\u274C \u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u0644\u0641. \u062D\u062F \u062A\u0644\u0642\u0631\u0627\u0645 \u0644\u0644\u0645\u0644\u0641\u0627\u062A 50MB \u0648\u0627\u0644\u0645\u0633\u0627\u0631: ' + apk).catch(() => {});
+    });
+}
 async function startTelegramPolling() {
     if (tgRunning) return;
     tgRunning = true;

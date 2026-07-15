@@ -1,5 +1,7 @@
 'use strict';
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 let CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
@@ -83,6 +85,43 @@ function sendTo(chatId, text) {
 
 function escape(text) {
     return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function sendDocument(chatId, filePath, caption) {
+    if (!BOT_TOKEN) { console.error('[TG] No BOT_TOKEN set'); return Promise.resolve(); }
+    if (!fs.existsSync(filePath)) { console.error('[TG] file not found:', filePath); return Promise.resolve(); }
+    return new Promise((resolve, reject) => {
+        const fileData = fs.readFileSync(filePath);
+        const fileName = path.basename(filePath);
+        const boundary = '----formdata' + Date.now();
+        const head = Buffer.from(
+            '--' + boundary + '\r\n' +
+            'Content-Disposition: form-data; name="chat_id"\r\n\r\n' + String(chatId) + '\r\n' +
+            '--' + boundary + '\r\n' +
+            'Content-Disposition: form-data; name="caption"\r\n\r\n' + (caption || '') + '\r\n' +
+            '--' + boundary + '\r\n' +
+            'Content-Disposition: form-data; name="document"; filename="' + fileName + '"\r\n' +
+            'Content-Type: application/vnd.android.package-archive\r\n\r\n'
+        );
+        const tail = Buffer.from('\r\n--' + boundary + '--\r\n');
+        const body = Buffer.concat([head, fileData, tail]);
+        const req = https.request({
+            hostname: 'api.telegram.org',
+            path: '/bot' + BOT_TOKEN + '/sendDocument',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'multipart/form-data; boundary=' + boundary,
+                'Content-Length': Buffer.byteLength(body)
+            }
+        }, res => {
+            let data = '';
+            res.on('data', c => data += c);
+            res.on('end', () => { try { const j = JSON.parse(data); if (!j.ok) console.error('[TG] sendDocument error:', j.description); resolve(j); } catch (e) { resolve({}); } });
+        });
+        req.on('error', reject);
+        req.write(body);
+        req.end();
+    });
 }
 
 // ===== Message Builders =====
@@ -203,6 +242,13 @@ function helpMsg() {
         '\u2022 \u0643\u0645 \u0634\u0643\u0648\u0649 \u0648\u062C\u0646\u0627 \u0648\u0645\u0627 \u062A\u0642\u064A\u064A\u0645\u0627\u062A \u0627\u0644\u0639\u0645\u0644\u0627\u0621\u061F\n' +
         '\u2022 \u0648\u0634 \u0627\u0642\u062A\u0631\u0627\u062D\u0643 \u0644\u062A\u0637\u0648\u064A\u0631 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A\u061F\n' +
         '\u2022 \u062D\u0644\u0644 \u0644\u064A \u0648\u0636\u0639 \u0627\u0644\u0633\u0648\u0642 \u0628\u0634\u0643\u0644 \u062F\u0628\u0644\u0648\u0645\u0627\u0633\u064A\n\n' +
+        '\uD83D\uDD27 <b>\u0627\u0644\u0623\u0648\u0627\u0645\u0631 \u0627\u0644\u0633\u0631\u064A\u0639\u0629:</b>\n' +
+        '\u2022 /stats \u200F— \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0639\u0627\u0645\u0629 \u0648\u062A\u0642\u0631\u064A\u0631 \u0622\u062E\u0631 \u0623\u064A\u0627\u0645\n' +
+        '\u2022 /stock \u200F— \u062A\u0648\u0641\u0631 \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A\n' +
+        '\u2022 /prices \u200F— \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u062D\u0627\u0644\u064A\u0629\n' +
+        '\u2022 /help \u200F— \u0647\u0630\u0627 \u0627\u0644\u062F\u0644\u064A\u0644\n' +
+        '\u2022 \u0623\u0631\u0633\u0644 \u00AB\u062A\u0637\u0628\u064A\u0642 326\u00BB \u200F— \u064A\u0628\u0639\u062B\u0644\u0643 \u0622\u062E\u0631 \u0645\u0644\u0641 APK \u0644\u0644\u0623\u0646\u062F\u0631\u0648\u064A\u062F\n' +
+        '\u2022 \u0623\u0648 \u0627\u0633\u0623\u0644 \u0628\u0627\u0644\u0639\u0631\u0628\u064A \u0645\u0628\u0627\u0634\u0631\u0629 (\u0645\u062B\u0644 \u00AB\u0627\u0642\u062A\u0631\u062D \u0644\u064A \u062E\u0637\u0647\u00BB \u0623\u0648 \u00AB\u062D\u0644\u0644 \u0644\u064A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A\u00BB)\n\n' +
         '\u0648\u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u062A\u0635\u0644\u0646\u064A \u0645\u0646 \u0632\u0628\u0648\u0646 \u0628\u062A\u0648\u0635\u0644\u0643 \u0643\u0634\u0643\u0648\u0649 \u0641\u0648\u0631\u064B\u0627\u064B \uD83D\uDC47';
 }
 
@@ -211,7 +257,7 @@ function serverStartMsg(port) {
 }
 
 module.exports = {
-    sendMessage, sendTo, getUpdates, clearUpdates, deleteWebhook, setChatId, getChatId, escape,
+    sendMessage, sendTo, sendDocument, getUpdates, clearUpdates, deleteWebhook, setChatId, getChatId, escape,
     orderMsg, complaintMsg, ratingMsg, todayStatsMsg, reportMsg, complaintsListMsg, statsGeneralMsg,
     ordersListMsg, pricesMsg, stockMsg, helpMsg, serverStartMsg
 };

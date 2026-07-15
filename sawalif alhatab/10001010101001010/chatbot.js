@@ -79,23 +79,67 @@ async function poll() {
                 await sendMsg(chatId, helpMsg());
                 continue;
             }
+            if (text === '/menu' || text === 'القائمة' || text === 'المنيو' || text === 'القائمه') {
+                await sendMsg(chatId, menuMsg());
+                continue;
+            }
+            if (text === '/services' || text === 'الخدمات' || text === 'خدمات' || text === 'الخدمات') {
+                await sendMsg(chatId, servicesMsg());
+                continue;
+            }
+            if (text === '/about' || text === 'عن' || text === 'عن المقهى' || text === 'منو') {
+                await sendMsg(chatId, aboutMsg());
+                continue;
+            }
+            if (text === '/order' || text === 'اطلب' || text === 'أريد أطلب' || text === 'طلب') {
+                await sendMsg(chatId, '🛒 لتقديم طلب اذهب للموقع:\n' + WEBSITE_URL + '\n\nأو أخبرني ماذا تريد (مثال: "أبي شاي كبير وذرة وسط") وأرشدك.');
+                continue;
+            }
 
             await sendMsg(chatId, '\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...');
             const context = {
                 menu: Object.values(MENU_INFO),
+                services: ['توصيل للمنازل', 'طلب عبر الموقع', 'شاي على الحطب', 'ذرة وبوشار محمصة على الحطب'],
                 website: WEBSITE_URL,
                 about: 'مقهى "سوالف على الحطب" يقدم شاي على الحطب، ذرة، وبوشار. التوصيل متاح.'
             };
-            const system = 'You are a friendly Arabic customer service bot for "Sawalif Alhatab" cafe (سوالف على الحطب).\n' +
+            const system = 'You are a friendly Arabic assistant for "Sawalif Alhatab" cafe (سوالف على الحطب) in Jordan.\n' +
                 'Always respond in Arabic. Be warm and helpful.\n\n' +
                 'Cafe info:\n' + JSON.stringify(context, null, 2) + '\n\n' +
-                'Answer questions about the menu, prices, location, and hours naturally. Do not make up information.';
+                'Answer questions about the menu, prices, services, location, and hours naturally. ' +
+                'You may also chat generally about the cafe and give light suggestions. Do not make up information.';
             let reply = null;
             try { reply = await ai.ask(text, { system }); } catch (e) {}
-            await sendMsg(chatId, reply || '\u0639\u0630\u0631\u0627\u064B \u062D\u062F\u062B \u062E\u0637\u0623. \u062C\u0631\u0628 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.');
+            if (!reply) reply = 'عذراً حدث خطأ. تأكد أن Ollama شغّال على ' + (process.env.OLLAMA_URL || 'http://localhost:11434') + '.';
+            await sendMsg(chatId, reply);
         }
     } catch (e) { console.error('[CBot] error:', e.message); }
     setTimeout(poll, 3000);
+}
+
+function menuMsg() {
+    let msg = '\uD83C\uDF7A <b>قائمة سوالف على الحطب</b>\n\n';
+    for (const k of Object.keys(MENU_INFO)) {
+        msg += '\u2022 ' + MENU_INFO[k].name + ' — ' + MENU_INFO[k].price + '\n';
+    }
+    msg += '\n\uD83C\uDF10 اطلب من: ' + WEBSITE_URL;
+    return msg;
+}
+
+function servicesMsg() {
+    return '\uD83C\uDFE6 <b>خدماتنا:</b>\n\n' +
+        '\u2022 ☕ شاي على الحطب\n' +
+        '\u2022 🌽 ذرة محمصة على الحطب (كبير/وسط)\n' +
+        '\u2022 🍿 بوشار محمص على الحطب (كبير/وسط)\n' +
+        '\u2022 🛵 توصيل للمنازل\n' +
+        '\u2022 💻 طلب عبر الموقع: ' + WEBSITE_URL + '\n\n' +
+        'اسألني عن أي خدمة وسأجاوبك!';
+}
+
+function aboutMsg() {
+    return '\uD83C\uDF32 <b>عن سوالف على الحطب</b>\n\n' +
+        'مقهى أردني يقدم شاي، ذرة، وبوشار محمصة على الحطب بنكهة شعبية أصيلة.\n' +
+        'التوصيل متاح عبر الموقع. راسلني بأي استفسار عن الخدمات أو الأسعار!';
 }
 
 function helpMsg() {
@@ -106,6 +150,8 @@ function helpMsg() {
         '\" \u0643\u0645 \u0633\u0639\u0631 \u0627\u0644\u0630\u0631\u0629 \u0627\u0644\u0643\u0628\u064A\u0631 \u061F \"\n' +
         '\" \u0648\u064A\u0646 \u0645\u0648\u0642\u0639\u0643\u0645 \u061F \"\n' +
         '\" \u0623\u0631\u064A\u062F \u0623\u0646 \u0623\u0637\u0644\u0628 \u0627\u0644\u0622\u0646 \"\n\n' +
+        '\uD83D\uDD27 <b>\u0627\u0644\u0623\u0648\u0627\u0645\u0631:</b>\n' +
+        '/menu \u200F— \u0627\u0644\u0642\u0627\u0626\u0645\u0629 | /services \u200F— \u0627\u0644\u062E\u062F\u0645\u0627\u062A | /about \u200F— \u0639\u0646 \u0627\u0644\u0645\u0642\u0647\u0649 | /order \u200F— \u0643\u064A\u0641 \u0623\u0637\u0644\u0628\n\n' +
         '\uD83C\uDF10 ' + WEBSITE_URL;
 }
 
