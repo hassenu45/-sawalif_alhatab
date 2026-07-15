@@ -57,4 +57,23 @@ android:textSize="24sp"
         android:layout_marginTop="10dp"
         android:padding="12dp" />
 
+    <Button
+        android:id="@+id/settingsUpdate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="التحقق من تحديث التطبيق"
+        android:backgroundTint="#d4a056"
+        android:textColor="#000"
+        android:layout_marginTop="20dp"
+        android:padding="12dp" />
+
+    <TextView
+        android:id="@+id/settingsUpdateStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#888"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:paddingTop="10dp" />
+
 </LinearLayout>

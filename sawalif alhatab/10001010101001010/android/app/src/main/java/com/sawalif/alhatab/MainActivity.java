@@ -12,6 +12,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import com.google.android.material.navigation.NavigationView;
 import androidx.appcompat.widget.Toolbar;
 import android.view.MenuItem;
+import com.sawalif.alhatab.UpdateHelper;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -82,6 +83,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.loadUrl("file:///android_asset/login.html");
+
+        new UpdateHelper(this).checkForUpdateAuto();
     }
 
     @Override

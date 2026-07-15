@@ -6,10 +6,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.Button;
+import android.widget.TextView;
 import android.content.SharedPreferences;
 import android.widget.Toast;
 import androidx.fragment.app.Fragment;
 import com.sawalif.alhatab.R;
+import com.sawalif.alhatab.UpdateHelper;
 
 public class SettingsFragment extends Fragment {
 
@@ -39,6 +41,15 @@ public class SettingsFragment extends Fragment {
         clearBtn.setOnClickListener(view -> {
             requireActivity().getSharedPreferences("orders", 0).edit().clear().apply();
             Toast.makeText(getContext(), "تم مسح الطلبات", Toast.LENGTH_SHORT).show();
+        });
+
+        Button updateBtn = v.findViewById(R.id.settingsUpdate);
+        TextView updateStatus = v.findViewById(R.id.settingsUpdateStatus);
+        UpdateHelper updater = new UpdateHelper(requireActivity());
+        updateBtn.setOnClickListener(view -> {
+            updateStatus.setText("جار التحقق من التحديث...");
+            updater.checkForUpdate();
+            updateStatus.setText("");
         });
 
         return v;
