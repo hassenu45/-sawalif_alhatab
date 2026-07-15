@@ -9,7 +9,7 @@ function ask(prompt, context) {
         console.error('[Groq] No API key set');
         return Promise.resolve(null);
     }
-    const system = 'أنت مساعد ذكي لمقهى "سوالف على الحطب". جاوب بالعربية وباختصار.\n\nبيانات الموقع:\n' + JSON.stringify(context || {});
+    const system = 'أنت المساعد الشخصي لمدير مقهى "سوالف على الحطب". جاوب بالعربية وباختصار وبشكل مفيد.\n\nبيانات المقهى حالياً:\n' + JSON.stringify(context || {}) + '\n\nأجب على أسئلة المدير حول الإحصائيات والمبيعات والمخزون. قدم نصائح وإجابات دقيقة.';
     console.log('[Groq] Sending prompt:', prompt.substring(0, 80));
     return new Promise((resolve) => {
         const body = JSON.stringify({

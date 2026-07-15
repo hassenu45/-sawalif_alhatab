@@ -188,6 +188,14 @@ const server = http.createServer(async (req, res) => {
                 fs.createReadStream(apk).pipe(res);
                 return;
             }
+            if (pathname === '/api/ai' && req.method === 'POST') {
+                const body = await readBody(req);
+                if (!body.question) return sendJSON(res, 400, { error: 'question required' });
+                const ctx = buildContext();
+                const reply = await ai.ask(body.question, ctx);
+                if (!reply) return sendJSON(res, 500, { error: 'AI غير متاح حالياً' });
+                return sendJSON(res, 200, { reply });
+            }
             return sendJSON(res, 404, { error: 'not found' });
         }
         if (req.method === 'GET' || req.method === 'HEAD') {
@@ -217,7 +225,7 @@ server.listen(PORT, () => {
     } else {
         console.log('[TG] No TELEGRAM_BOT_TOKEN - bot disabled');
     }
-    chatbot.start().catch(() => {});
+    // chatbot.start().catch(() => {}); // Disabled - AI is now manager-only via website
 });
 
 // ===================== Telegram Bot =====================

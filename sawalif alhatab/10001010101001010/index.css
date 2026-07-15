@@ -1,43 +1,5 @@
 @import url('login.css');
 
-/* ===== Luxury SVG Icons ===== */
-.nav-ic, .info-ic {
-    width: 22px;
-    height: 22px;
-    stroke: #d4a056;
-    flex-shrink: 0;
-    vertical-align: middle;
-    filter: drop-shadow(0 0 4px rgba(212, 160, 86, 0.25));
-}
-
-.drawer-nav a {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.drawer-nav .nav-ic {
-    width: 24px;
-    height: 24px;
-    transition: transform 0.25s ease, stroke 0.25s ease;
-}
-
-.drawer-nav a:hover .nav-ic {
-    transform: scale(1.12);
-    stroke: #ffe5a3;
-}
-
-.info-card p {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    line-height: 1.7;
-}
-
-.info-card .info-ic {
-    margin-top: 3px;
-}
-
 .complaint-title {
     display: flex;
     align-items: center;
@@ -50,12 +12,6 @@
     font-size: 1.3rem;
 }
 
-.complaint-title .info-ic {
-    width: 26px;
-    height: 26px;
-}
-
-/* Star Rating */
 .star-rating {
     display: flex;
     gap: 8px;
@@ -68,82 +24,9 @@
     font-size: 2.2rem;
     color: rgba(212, 160, 86, 0.25);
     cursor: pointer;
-    transition: color 0.2s ease, transform 0.2s ease, text-shadow 0.2s ease;
     line-height: 1;
-}
-
-.star-rating span:hover {
-    transform: scale(1.15);
 }
 
 .star-rating span.active {
     color: #ffd66b;
-    text-shadow: 0 0 12px rgba(255, 214, 107, 0.6);
-}
-
-/* ===== Elegant gold glow for social (replaces fire) ===== */
-@keyframes goldGlow {
-    0% { box-shadow: 0 0 6px rgba(212, 160, 86, 0.35), inset 0 0 6px rgba(212, 160, 86, 0.15); border-color: rgba(212, 160, 86, 0.4); }
-    50% { box-shadow: 0 0 16px rgba(212, 160, 86, 0.55), inset 0 0 10px rgba(212, 160, 86, 0.25); border-color: rgba(255, 229, 163, 0.7); }
-    100% { box-shadow: 0 0 8px rgba(212, 160, 86, 0.45), inset 0 0 8px rgba(212, 160, 86, 0.2); border-color: rgba(212, 160, 86, 0.5); }
-}
-
-.social-icon {
-    animation: goldGlow 2.4s ease-in-out infinite alternate;
-    border-color: rgba(212, 160, 86, 0.4);
-}
-
-.social-icon:hover {
-    box-shadow: 0 0 22px rgba(212, 160, 86, 0.8), inset 0 0 12px rgba(212, 160, 86, 0.4);
-    border-color: #ffe5a3;
-}
-
-.social-icon svg {
-    stroke: #d4a056;
-    animation: goldGlow 2.4s ease-in-out infinite alternate;
-}
-
-.social-icon:nth-child(2),
-.social-icon:nth-child(2) svg {
-    animation-delay: 0.8s;
-}
-
-.social-icon:hover svg {
-    stroke: #fff;
-    filter: drop-shadow(0 0 8px rgba(212, 160, 86, 0.7));
-}
-
-/* ===== Enhanced Luxury Touches ===== */
-.main-content .site-title {
-    text-shadow: 0 0 25px rgba(212, 160, 86, 0.25);
-}
-
-.card {
-    background: linear-gradient(160deg, rgba(28, 20, 12, 0.92) 0%, rgba(18, 12, 7, 0.92) 100%);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), inset 0 0 18px rgba(212, 160, 86, 0.05);
-}
-
-.classic-panel, .login-card {
-    background: linear-gradient(160deg, rgba(26, 18, 11, 0.92) 0%, rgba(15, 10, 6, 0.92) 100%);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6), inset 0 0 22px rgba(212, 160, 86, 0.04);
-}
-
-.menu-panel, .cart-panel, .drawer {
-    background:
-        linear-gradient(160deg, rgba(28, 19, 11, 0.97) 0%, rgba(12, 8, 4, 0.98) 100%);
-}
-
-/* Subtle gold hairline frame on main cards */
-.card::after {
-    content: '';
-    position: absolute;
-    inset: 6px;
-    border: 1px solid rgba(212, 160, 86, 0.12);
-    border-radius: 12px;
-    pointer-events: none;
-    transition: border-color 0.3s ease;
-}
-
-.card:hover::after {
-    border-color: rgba(212, 160, 86, 0.35);
 }
