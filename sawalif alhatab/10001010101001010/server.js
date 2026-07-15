@@ -105,7 +105,7 @@ const server = http.createServer(async (req, res) => {
                 if (body.prices) db.prices = body.prices;
                 if (body.stock) db.stock = body.stock;
                 persist();
-                tg.sendMessage(tg.priceUpdateMsg('admin', db.prices)).catch(() => {});
+                tg.sendTo(chatId, tg.priceUpdateMsg('admin', db.prices)).catch(() => {});
                 return sendJSON(res, 200, { prices: db.prices, stock: db.stock });
             }
             if (pathname === '/api/orders' && req.method === 'POST') {
@@ -124,7 +124,7 @@ const server = http.createServer(async (req, res) => {
                 db.dailyStats[today].orders++;
                 for (const it of order.items) { const k = it.text || 'other'; db.dailyStats[today].items[k] = (db.dailyStats[today].items[k] || 0) + 1; }
                 persist();
-                tg.sendMessage(tg.orderMsg(order)).catch(() => {});
+                tg.sendTo(chatId, tg.orderMsg(order)).catch(() => {});
                 return sendJSON(res, 200, { ok: true, id: order.id });
             }
             if (pathname === '/api/orders' && req.method === 'GET') return sendJSON(res, 200, { orders: db.orders });
@@ -134,7 +134,7 @@ const server = http.createServer(async (req, res) => {
                 const complaint = { id: uid(), date: new Date().toISOString(), name: String(body.name), phone: String(body.phone || ''), message: String(body.message) };
                 db.complaints.push(complaint);
                 persist();
-                tg.sendMessage(tg.complaintMsg(complaint)).catch(() => {});
+                tg.sendTo(chatId, tg.complaintMsg(complaint)).catch(() => {});
                 return sendJSON(res, 200, { ok: true });
             }
             if (pathname === '/api/ratings' && req.method === 'POST') {
@@ -144,7 +144,7 @@ const server = http.createServer(async (req, res) => {
                 const rating = { id: uid(), date: new Date().toISOString(), name: String(body.name || 'زبون'), score, review: String(body.review || '') };
                 db.ratings.push(rating);
                 persist();
-                tg.sendMessage(tg.ratingMsg(rating)).catch(() => {});
+                tg.sendTo(chatId, tg.ratingMsg(rating)).catch(() => {});
                 return sendJSON(res, 200, { ok: true });
             }
             if (pathname === '/api/visit' && req.method === 'POST') {
@@ -159,7 +159,7 @@ const server = http.createServer(async (req, res) => {
                 const id = delMatch[1];
                 db.orders = db.orders.filter(o => o.id !== id);
                 persist();
-                tg.sendMessage(tg.orderDeletedMsg(id)).catch(() => {});
+                tg.sendTo(chatId, tg.orderDeletedMsg(id)).catch(() => {});
                 return sendJSON(res, 200, { ok: true });
             }
             if (pathname === '/api/android-update' && req.method === 'GET') {
@@ -216,47 +216,25 @@ server.listen(PORT, () => {
     } else {
         console.log('[TG] No TELEGRAM_BOT_TOKEN - bot disabled');
     }
-    chatbot.start().catch(() => {});
 });
-
-function isOwner(chatId) { return String(chatId) === String(db.telegramChatId); }
 
 function smartMatch(text, keywords) { return keywords.some(k => text.includes(k)); }
 
 async function handleTgCommand(chatId, text) {
-    const isOwn = isOwner(chatId);
     const t = text.replace(/[\/#!]/g, '').trim();
 
-    // Arabic commands:
+    // ===== Commands =====
     if (t === 'start' || t === 'ابدأ' || t === 'ربط') {
-        if (db.telegramChatId && String(chatId) !== db.telegramChatId &&
-            String(chatId) !== (process.env.TELEGRAM_CHAT_ID || '')) {
-            tg.sendMessage('\u274C \u0627\u0644\u0628\u0648\u062A \u0645\u0631\u062A\u0628\u0637 \u0628\u062D\u0633\u0627\u0628 \u0622\u062E\u0631.').catch(() => {});
-            return;
-        }
-        tg.setChatId(chatId);
-        tg.sendMessage('\u2705 \u0645\u0631\u062D\u0628\u0627! \u0623\u0646\u0627 \u0645\u0633\u0627\u0639\u062F\u0643 \u0627\u0644\u0630\u0643\u064A. \u0627\u0633\u0623\u0644\u0646\u064A \u0639\u0646 \u0623\u064A \u0634\u064A \u0628\u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0648\u0623\u0646\u0627 \u0623\u062D\u0644\u0644 \u0644\u0643 \u0648\u0623\u0642\u062F\u0645 \u0627\u0644\u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \u2714\ufe0f').catch(() => {});
-        db.telegramChatId = String(chatId);
-        persist();
+        tg.sendTo(chatId, '\u2705 \u0645\u0631\u062D\u0628\u0627! \u0623\u0646\u0627 \u0645\u0633\u0627\u0639\u062F\u0643 \u0627\u0644\u0630\u0643\u064A \u0645\u062F\u0639\u0648\u0645 \u0628\u0640 Ollama.\n\u0627\u0633\u0623\u0644\u0646\u064A \u0639\u0646 \u0623\u064A \u0634\u064A \u0628\u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0648\u0623\u0646\u0627 \u0623\u062D\u0644\u0644 \u0644\u0643 \u0648\u0623\u0642\u062F\u0645 \u0627\u0644\u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \u2714\ufe0f').catch(() => {});
         return;
     }
 
-    if (!isOwn) {
-        // Customer message → forward to owner as a problem/complaint
-        const complaint = { id: uid(), date: new Date().toISOString(), name: '\u0632\u0628\u0648\u0646 \u0639\u0628\u0631 \u062a\u0644\u0642\u0631\u0627\u0645', phone: String(chatId), message: text };
-        db.complaints.push(complaint);
-        persist();
-        tg.sendMessage(tg.complaintMsg(complaint)).catch(() => {});
-        tg.sendTo(chatId, '\u0634\u0643\u0631\u064b\u0627 \u062a\u0648\u0627\u0635\u0644\u0643 \u0645\u0639 \u0633\u0648\u0627\u0644\u0641 \u0639\u0644\u0649 \u0627\u0644\u062d\u0637\u0628 \uD83C\uDF32\n\u062a\u0645 \u0627\u0633\u062a\u0644\u0627\u0645 \u0631\u0633\u0627\u0644\u062a\u0643 \u0648\u0633\u064a\u062a\u0648\u0627\u0635\u0644 \u0645\u0639\u0643 \u0635\u0627\u062d\u0628 \u0627\u0644\u0645\u0642\u0647\u0649 \u0642\u0631\u064a\u0628\u064b\u0627.').catch(() => {});
-        return;
-    }
-
-    // ===== Owner: send latest Android APK =====
+    // ===== Send latest Android APK =====
     if (smartMatch(t, ['تطبيق', 'apk', 'تحديث التطبيق', 'برنامج']) || /تطبيق\s*\d+/.test(text)) {
         return sendAndroidUpdate(chatId, text);
     }
 
-    // ===== Owner: smart AI chat about the site =====
+    // ===== Build site context =====
     const today = new Date().toISOString().slice(0, 10);
     const ts = db.dailyStats[today] || { visitors: 0, orders: 0, items: {} };
     const totalOrders = db.orders.length;
@@ -291,21 +269,21 @@ async function handleTgCommand(chatId, text) {
         recentRatings: recentRatings,
         recentRatingsText: recentRatings.map(r => '(' + r.score + '/5) ' + (r.review || r.name))
     };
-    // ===== Owner commands =====
+
     if (t === 'help' || t === 'مساعدة' || t === 'أوامر' || t === 'اوامر') {
-        tg.sendMessage(tg.helpMsg()).catch(() => {});
+        tg.sendTo(chatId, tg.helpMsg()).catch(() => {});
         return;
     }
     if (t === 'stats' || t === 'إحصائيات' || t === 'تقرير' || t === 'احصائيات') {
-        tg.sendMessage(tg.statsGeneralMsg(totalVisitors, totalOrders, totalRevenue, totalComplaints) + '\n\n' + tg.reportMsg(db)).catch(() => {});
+        tg.sendTo(chatId, tg.statsGeneralMsg(totalVisitors, totalOrders, totalRevenue, totalComplaints) + '\n\n' + tg.reportMsg(db)).catch(() => {});
         return;
     }
     if (t === 'stock' || t === 'توفر' || t === 'المخزون' || t === 'مخزون') {
-        tg.sendMessage(tg.stockMsg(db.stock)).catch(() => {});
+        tg.sendTo(chatId, tg.stockMsg(db.stock)).catch(() => {});
         return;
     }
     if (t === 'prices' || t === 'الأسعار' || t === 'الاسعار' || t === 'السعر') {
-        tg.sendMessage(tg.pricesMsg(db.prices)).catch(() => {});
+        tg.sendTo(chatId, tg.pricesMsg(db.prices)).catch(() => {});
         return;
     }
 
@@ -317,11 +295,11 @@ async function handleTgCommand(chatId, text) {
         prompt = 'حلل لي وضع المقهى بشكل دبلوماسي وتحليلي بناءً على البيانات أدناه، واذكر نقاط القوة والضعف:\n\n' + text;
     }
 
-    tg.sendMessage('\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...').catch(() => {});
+    tg.sendTo(chatId, '\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...').catch(() => {});
     let reply = null;
     try { reply = await ai.ask(prompt, context); } catch (e) {}
     if (!reply) reply = '❌ لم أتمكن من الرد. تأكد أن Ollama شغّال على ' + (process.env.OLLAMA_URL || 'http://localhost:11434') + ' أو أن مفتاح GROQ_API_KEY معيّن.';
-    tg.sendMessage(reply).catch(() => {});
+    tg.sendTo(chatId, reply).catch(() => {});
 }
 
 let tgOffset = 0;
@@ -358,15 +336,15 @@ function getAndroidVersion() {
 function sendAndroidUpdate(chatId, text) {
     const apk = findLatestApk();
     if (!apk) {
-        tg.sendMessage('\u274C \u0645\u0627 \u0644\u0642\u064A\u062A \u0645\u0644\u0641 APK \u062F\u0627\u062E\u0644 \u0645\u062C\u0644\u062F android. \u062D\u0637 \u0627\u0644\u0645\u0644\u0641 \u0641\u064A \u0645\u0643\u0627\u0646 \u0645\u062B\u0644 android/app/release/app-release.apk').catch(() => {});
+        tg.sendTo(chatId, '\u274C \u0645\u0627 \u0644\u0642\u064A\u062A \u0645\u0644\u0641 APK \u062F\u0627\u062E\u0644 \u0645\u062C\u0644\u062F android. \u062D\u0637 \u0627\u0644\u0645\u0644\u0641 \u0641\u064A \u0645\u0643\u0627\u0646 \u0645\u062B\u0644 android/app/release/app-release.apk').catch(() => {});
         return Promise.resolve();
     }
     const m = text.match(/(\d+)/);
     const ver = m ? m[1] : '';
     const caption = '\uD83C\uDCF1 \u062A\u062D\u062F\u064A\u062B \u062A\u0637\u0628\u064A\u0642 \u0623\u0646\u062F\u0631\u0648\u064A\u062F' + (ver ? ' (\u0628\u0646\u0627\u0621 ' + ver + ')' : '') + '\n\uD83D\uDCE6 ' + path.basename(apk);
-    tg.sendMessage('\uD83D\uDCE4 \u062C\u0627\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u0644\u0641...').catch(() => {});
+    tg.sendTo(chatId, '\uD83D\uDCE4 \u062C\u0627\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u0644\u0641...').catch(() => {});
     return tg.sendDocument(chatId, apk, caption).catch(() => {
-        tg.sendMessage('\u274C \u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u0644\u0641. \u062D\u062F \u062A\u0644\u0642\u0631\u0627\u0645 \u0644\u0644\u0645\u0644\u0641\u0627\u062A 50MB \u0648\u0627\u0644\u0645\u0633\u0627\u0631: ' + apk).catch(() => {});
+        tg.sendTo(chatId, '\u274C \u062A\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u0644\u0641. \u062D\u062F \u062A\u0644\u0642\u0631\u0627\u0645 \u0644\u0644\u0645\u0644\u0641\u0627\u062A 50MB \u0648\u0627\u0644\u0645\u0633\u0627\u0631: ' + apk).catch(() => {});
     });
 }
 async function startTelegramPolling() {
@@ -383,3 +361,4 @@ async function startTelegramPolling() {
     } catch (e) { console.error('[TG] polling error:', e.message); }
     setTimeout(startTelegramPolling, 3000);
 }
+
