@@ -225,7 +225,7 @@ server.listen(PORT, () => {
     } else {
         console.log('[TG] No TELEGRAM_BOT_TOKEN - bot disabled');
     }
-    // chatbot.start().catch(() => {}); // Disabled - AI is now manager-only via website
+    chatbot.start().catch(() => {});
 });
 
 // ===================== Telegram Bot =====================

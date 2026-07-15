@@ -1,20 +1,21 @@
 'use strict';
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 const ai = require('./ai');
 
 const BOT_TOKEN = process.env.CLIENT_BOT_TOKEN || '';
-const WEBSITE_URL = 'https://' + (process.env.WEBSITE_DOMAIN || 'sawalif-alhatab.onrender.com');
+const DB_FILE = path.join(__dirname, 'data', 'db.json');
 
 let offset = 0;
 let running = false;
 
-const MENU_INFO = {
-    shay: { name: 'شاي على الحطب', price: '1.5 د.أ' },
-    dhrah_k: { name: 'ذرة كبير', price: '3.0 د.أ' },
-    dhrah_m: { name: 'ذرة وسط', price: '2.0 د.أ' },
-    bushar_k: { name: 'بوشار كبير', price: '4.0 د.أ' },
-    bushar_m: { name: 'بوشار وسط', price: '3.0 د.أ' }
-};
+function loadDB() {
+    try {
+        if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    } catch (e) {}
+    return { prices: { shay: 1.5, dhrah: { كبير: 3.0, وسط: 2.0 }, bushar: { كبير: 4.0, وسط: 3.0 } }, stock: { shay: true, dhrah: { كبير: true, وسط: true }, bushar: { كبير: true, وسط: true } }, orders: [], complaints: [], ratings: [], dailyStats: {} };
+}
 
 function sendMsg(chatId, text) {
     if (!BOT_TOKEN) return Promise.resolve();
@@ -61,8 +62,17 @@ function getUpdates() {
 async function start() {
     if (!BOT_TOKEN) { console.log('[CBot] No CLIENT_BOT_TOKEN set, skipping'); return; }
     await deleteWebhook();
-    console.log('[CBot] Started');
+    console.log('[CBot] Started as management bot');
     poll();
+}
+
+function menuText(p) {
+    return '☕ شاي على الحطب: ' + p.shay + ' د.أ\n🌽 ذرة كبير: ' + p.dhrah.كبير + ' | وسط: ' + p.dhrah.وسط + ' د.أ\n🍿 بوشار كبير: ' + p.bushar.كبير + ' | وسط: ' + p.bushar.وسط + ' د.أ';
+}
+
+function stockText(s) {
+    const ok = v => v ? '✅ متوفر' : '❌ غير متوفر';
+    return '☕ شاي: ' + ok(s.shay) + '\n🌽 ذرة كبير: ' + ok(s.dhrah.كبير) + ' | وسط: ' + ok(s.dhrah.وسط) + '\n🍿 بوشار كبير: ' + ok(s.bushar.كبير) + ' | وسط: ' + ok(s.bushar.وسط);
 }
 
 async function poll() {
@@ -74,85 +84,70 @@ async function poll() {
             if (!msg || !msg.text) continue;
             const text = msg.text.trim();
             const chatId = msg.chat.id;
+            const db = loadDB();
+            const p = db.prices, s = db.stock;
 
             if (text === '/start' || text === 'ابدأ' || text === 'help' || text === 'مساعدة') {
-                await sendMsg(chatId, helpMsg());
+                await sendMsg(chatId, '🎛 <b>بوت إدارة سوالف على الحطب</b>\n\n/price - الأسعار\n/stock - المخزون\n/stats - الإحصائيات\n/setprice منتج سعر - تعديل السعر\n/setstock منتج on/off - تعديل التوفر\nأو اسأل أي سؤال للمساعد الذكي');
                 continue;
             }
-            if (text === '/menu' || text === 'القائمة' || text === 'المنيو' || text === 'القائمه') {
-                await sendMsg(chatId, menuMsg());
+            if (text === '/price' || text === 'price' || text === 'الأسعار' || text === 'القائمة' || text === 'المنيو') {
+                await sendMsg(chatId, '📋 الأسعار:\n' + menuText(p));
                 continue;
             }
-            if (text === '/services' || text === 'الخدمات' || text === 'خدمات' || text === 'الخدمات') {
-                await sendMsg(chatId, servicesMsg());
+            if (text === '/stock' || text === 'stock' || text === 'المخزون' || text === 'التوفر') {
+                await sendMsg(chatId, '📦 المخزون:\n' + stockText(s));
                 continue;
             }
-            if (text === '/about' || text === 'عن' || text === 'عن المقهى' || text === 'منو') {
-                await sendMsg(chatId, aboutMsg());
+            if (text === '/stats' || text === 'stats' || text === 'إحصائيات' || text === 'احصائيات') {
+                const today = new Date().toISOString().slice(0, 10);
+                const ts = db.dailyStats[today] || { visitors: 0, orders: 0 };
+                const totalV = Object.values(db.dailyStats).reduce((a, d) => a + (d.visitors || 0), 0);
+                const avg = db.ratings.length ? (db.ratings.reduce((a, r) => a + r.score, 0) / db.ratings.length).toFixed(1) : 0;
+                await sendMsg(chatId, '📊 الإحصائيات:\n👀 زوار: ' + totalV + '\n🛵 طلبات: ' + db.orders.length + '\n💬 شكاوي: ' + db.complaints.length + '\n⭐ تقييمات: ' + db.ratings.length + ' (معدل: ' + avg + '/5)\n📅 اليوم: زوار ' + ts.visitors + ' | طلبات ' + ts.orders);
                 continue;
             }
-            if (text === '/order' || text === 'اطلب' || text === 'أريد أطلب' || text === 'طلب') {
-                await sendMsg(chatId, '🛒 لتقديم طلب اذهب للموقع:\n' + WEBSITE_URL + '\n\nأو أخبرني ماذا تريد (مثال: "أبي شاي كبير وذرة وسط") وأرشدك.');
+            if (text.startsWith('/setprice') || text.startsWith('setprice') || text.startsWith('سعر') || text.startsWith('/سعر')) {
+                const parts = text.replace('/', '').split(/\s+/);
+                if (parts.length < 3) { await sendMsg(chatId, 'مثال: setprice shay 2.0'); continue; }
+                const name = parts[1];
+                const val = parseFloat(parts[parts.length - 1]);
+                if (isNaN(val) || val <= 0) { await sendMsg(chatId, 'السعر غير صالح'); continue; }
+                if (name === 'shay' || name === 'شاي') p.shay = val;
+                else if (name === 'dhrah_k' || name === 'ذرة_ك' || name === 'ذرة كبير') p.dhrah.كبير = val;
+                else if (name === 'dhrah_m' || name === 'ذرة_و' || name === 'ذرة وسط') p.dhrah.وسط = val;
+                else if (name === 'bushar_k' || name === 'بوشار_ك' || name === 'بوشار كبير') p.bushar.كبير = val;
+                else if (name === 'bushar_m' || name === 'بوشار_و' || name === 'بوشار وسط') p.bushar.وسط = val;
+                else { await sendMsg(chatId, 'منتج غير معروف\nالمنتجات: shay, dhrah_k, dhrah_m, bushar_k, bushar_m'); continue; }
+                try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); } catch (e) {}
+                await sendMsg(chatId, '✅ تم تحديث السعر\n' + menuText(p));
+                continue;
+            }
+            if (text.startsWith('/setstock') || text.startsWith('setstock') || text.startsWith('توفر') || text.startsWith('/توفر')) {
+                const parts = text.replace('/', '').split(/\s+/);
+                if (parts.length < 3) { await sendMsg(chatId, 'مثال: setstock shay on'); continue; }
+                const name = parts[1];
+                const val = parts[parts.length - 1] === 'on' || parts[parts.length - 1] === 'true' || parts[parts.length - 1] === 'متوفر';
+                if (name === 'shay' || name === 'شاي') s.shay = val;
+                else if (name === 'dhrah_k' || name === 'ذرة_ك') s.dhrah.كبير = val;
+                else if (name === 'dhrah_m' || name === 'ذرة_و') s.dhrah.وسط = val;
+                else if (name === 'bushar_k' || name === 'بوشار_ك') s.bushar.كبير = val;
+                else if (name === 'bushar_m' || name === 'بوشار_و') s.bushar.وسط = val;
+                else { await sendMsg(chatId, 'منتج غير معروف'); continue; }
+                try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); } catch (e) {}
+                await sendMsg(chatId, '✅ تم تحديث التوفر\n' + stockText(s));
                 continue;
             }
 
-            await sendMsg(chatId, '\u23F3 \u062C\u0627\u0631 \u0627\u0644\u062A\u0641\u0643\u064A\u0631...');
-            const context = {
-                menu: Object.values(MENU_INFO),
-                services: ['توصيل للمنازل', 'طلب عبر الموقع', 'شاي على الحطب', 'ذرة وبوشار محمصة على الحطب'],
-                website: WEBSITE_URL,
-                about: 'مقهى "سوالف على الحطب" يقدم شاي على الحطب، ذرة، وبوشار. التوصيل متاح.'
-            };
-            const system = 'You are a friendly Arabic assistant for "Sawalif Alhatab" cafe (سوالف على الحطب) in Jordan.\n' +
-                'Always respond in Arabic. Be warm and helpful.\n\n' +
-                'Cafe info:\n' + JSON.stringify(context, null, 2) + '\n\n' +
-                'Answer questions about the menu, prices, services, location, and hours naturally. ' +
-                'You may also chat generally about the cafe and give light suggestions. Do not make up information.';
+            // AI fallback
+            await sendMsg(chatId, '⏳ جار التفكير...');
+            const ctx = { prices: p, stock: s, totalOrders: db.orders.length, totalComplaints: db.complaints.length, totalRatings: db.ratings.length };
             let reply = null;
-            try { reply = await ai.ask(text, { system }); } catch (e) {}
-            if (!reply) reply = 'عذراً حدث خطأ. تأكد أن Ollama شغّال على ' + (process.env.OLLAMA_URL || 'http://localhost:11434') + '.';
-            await sendMsg(chatId, reply);
+            try { reply = await ai.ask(text, ctx); } catch (e) {}
+            await sendMsg(chatId, reply || '❌ لم أتمكن من الرد حالياً');
         }
     } catch (e) { console.error('[CBot] error:', e.message); }
     setTimeout(poll, 3000);
-}
-
-function menuMsg() {
-    let msg = '\uD83C\uDF7A <b>قائمة سوالف على الحطب</b>\n\n';
-    for (const k of Object.keys(MENU_INFO)) {
-        msg += '\u2022 ' + MENU_INFO[k].name + ' — ' + MENU_INFO[k].price + '\n';
-    }
-    msg += '\n\uD83C\uDF10 اطلب من: ' + WEBSITE_URL;
-    return msg;
-}
-
-function servicesMsg() {
-    return '\uD83C\uDFE6 <b>خدماتنا:</b>\n\n' +
-        '\u2022 ☕ شاي على الحطب\n' +
-        '\u2022 🌽 ذرة محمصة على الحطب (كبير/وسط)\n' +
-        '\u2022 🍿 بوشار محمص على الحطب (كبير/وسط)\n' +
-        '\u2022 🛵 توصيل للمنازل\n' +
-        '\u2022 💻 طلب عبر الموقع: ' + WEBSITE_URL + '\n\n' +
-        'اسألني عن أي خدمة وسأجاوبك!';
-}
-
-function aboutMsg() {
-    return '\uD83C\uDF32 <b>عن سوالف على الحطب</b>\n\n' +
-        'مقهى أردني يقدم شاي، ذرة، وبوشار محمصة على الحطب بنكهة شعبية أصيلة.\n' +
-        'التوصيل متاح عبر الموقع. راسلني بأي استفسار عن الخدمات أو الأسعار!';
-}
-
-function helpMsg() {
-    return '\uD83E\uDD16 <b>\u0645\u0631\u062D\u0628\u0627\u064B \u0628\u0643 \u0641\u064A \u0633\u0648\u0627\u0644\u0641 \u0639\u0644\u0649 \u0627\u0644\u062D\u0637\u0628!</b>\n\n' +
-        '\u0623\u0646\u0627 \u0645\u0633\u0627\u0639\u062F \u0630\u0643\u064A. \u0627\u0633\u0623\u0644\u0646\u064A \u0639\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629\u060C \u0627\u0644\u0623\u0633\u0639\u0627\u0631\u060C \u0623\u0648 \u0623\u064A \u0634\u064A \u0639\u0646 \u0627\u0644\u0645\u0642\u0647\u0649!\n\n' +
-        '\uD83D\uDCAC <b>\u0642\u0648\u0644 \u0644\u064A \u0645\u062B\u0644\u0627\u064B:</b>\n' +
-        '\" \u0634\u0648 \u0639\u0646\u062F\u0643\u0645 \u0645\u0646 \u0645\u0634\u0631\u0648\u0628\u0627\u062A \u061F \"\n' +
-        '\" \u0643\u0645 \u0633\u0639\u0631 \u0627\u0644\u0630\u0631\u0629 \u0627\u0644\u0643\u0628\u064A\u0631 \u061F \"\n' +
-        '\" \u0648\u064A\u0646 \u0645\u0648\u0642\u0639\u0643\u0645 \u061F \"\n' +
-        '\" \u0623\u0631\u064A\u062F \u0623\u0646 \u0623\u0637\u0644\u0628 \u0627\u0644\u0622\u0646 \"\n\n' +
-        '\uD83D\uDD27 <b>\u0627\u0644\u0623\u0648\u0627\u0645\u0631:</b>\n' +
-        '/menu \u200F— \u0627\u0644\u0642\u0627\u0626\u0645\u0629 | /services \u200F— \u0627\u0644\u062E\u062F\u0645\u0627\u062A | /about \u200F— \u0639\u0646 \u0627\u0644\u0645\u0642\u0647\u0649 | /order \u200F— \u0643\u064A\u0641 \u0623\u0637\u0644\u0628\n\n' +
-        '\uD83C\uDF10 ' + WEBSITE_URL;
 }
 
 module.exports = { start };
